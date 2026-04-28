@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Salt & Pepper Collection</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/main.css" />
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="header-title">
+        <span class="header-eyebrow">A Family Collection</span>
+        <h1 class="site-title">The Salt &amp; Pepper Shakers</h1>
+        <span class="header-subtitle">Gathered with love, shared with joy</span>
+      </div>
+      <nav class="header-nav">
+        <a href="index.html" class="nav-link active">Gallery</a>
+        <a href="#" class="nav-link" id="admin-nav-link">Admin</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="main-content">
+
+    <!-- Search & Sort Bar -->
+    <div class="controls-bar">
+      <div class="search-wrap">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input type="text" id="search-input" class="search-input" placeholder="Search by name, year, origin, description…" autocomplete="off" />
+        <button class="search-clear" id="search-clear" aria-label="Clear search" style="display:none">✕</button>
+      </div>
+      <div class="sort-wrap">
+        <label class="sort-label" for="sort-select">Sort by</label>
+        <select id="sort-select" class="sort-select">
+          <option value="newest">Newest first</option>
+          <option value="oldest">Oldest first</option>
+          <option value="az">Name A → Z</option>
+          <option value="za">Name Z → A</option>
+          <option value="country-az">Country A → Z</option>
+          <option value="country-za">Country Z → A</option>
+          <option value="recently-added">Recently added</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Results count -->
+    <div class="results-info" id="results-info"></div>
+
+    <!-- Gallery Grid -->
+    <div class="gallery-grid" id="gallery-grid">
+      <div class="gallery-loading" id="gallery-loading">
+        <div class="loading-dots"><span></span><span></span><span></span></div>
+        <p>Loading the collection…</p>
+      </div>
+    </div>
+
+    <div class="gallery-empty" id="gallery-empty" style="display:none">
+      <p>No shakers found matching "<span id="empty-query"></span>"</p>
+      <button class="btn-soft" onclick="clearSearch()">Clear search</button>
+    </div>
+
+  </main>
+
+  <footer class="site-footer">
+    <p>A collection of treasures, lovingly catalogued &mdash; <span id="footer-year"></span></p>
+  </footer>
+
+  <!-- Firebase SDKs -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getStorage, ref, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { firebaseConfig } from "./js/firebase-config.js";
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
+    const auth = getAuth(app);
+
+    document.getElementById("footer-year").textContent = new Date().getFullYear();
+
+    // Admin nav link
+    onAuthStateChanged(auth, (user) => {
+      const link = document.getElementById("admin-nav-link");
+      if (user) {
+        link.href = "admin/index.html";
+        link.textContent = "Admin Panel";
+      } else {
+        link.href = "admin/login.html";
+        link.textContent = "Admin";
+      }
+    });
+
+    let allSets = [];
+
+    async function loadSets() {
+      try {
+        const q = query(collection(db, "sets"), orderBy("createdAt", "desc"));
+        const snapshot = await getDocs(q);
+        allSets = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        renderGallery(allSets);
+      } catch (e) {
+        console.error("Error loading sets:", e);
+        document.getElementById("gallery-loading").innerHTML = '<p style="color:var(--clay)">Could not load the collection. Check your Firebase config.</p>';
+      }
+    }
+
+    function escapeHtml(str) {
+      if (!str) return "";
+      return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    }
+
+    function renderGallery(sets) {
+      const grid = document.getElementById("gallery-grid");
+      const loading = document.getElementById("gallery-loading");
+      const empty = document.getElementById("gallery-empty");
+      const info = document.getElementById("results-info");
+
+      loading.style.display = "none";
+
+      if (sets.length === 0) {
+        grid.innerHTML = "";
+        empty.style.display = "block";
+        document.getElementById("empty-query").textContent = document.getElementById("search-input").value;
+        info.textContent = "";
+        return;
+      }
+
+      empty.style.display = "none";
+
+      const currentQuery = document.getElementById("search-input").value.trim();
+      if (currentQuery) {
+        info.textContent = `${sets.length} result${sets.length !== 1 ? "s" : ""} for "${currentQuery}"`;
+      } else {
+        info.textContent = `${sets.length} set${sets.length !== 1 ? "s" : ""} in the collection`;
+      }
+
+      grid.innerHTML = sets.map((set, i) => `
+        <a href="set.html?id=${escapeHtml(set.id)}" class="gallery-card" style="animation-delay:${i * 40}ms">
+          <div class="card-image-wrap">
+            <img
+              src="${escapeHtml(set.imageUrl || "")}"
+              alt="${escapeHtml(set.name)}"
+              class="card-image"
+              loading="lazy"
+              onerror="this.src='img/placeholder.svg'"
+            />
+            <div class="card-overlay">
+              <span class="card-name">${escapeHtml(set.name)}</span>
+              ${set.country ? `<span class="card-country">${escapeHtml(set.country)}</span>` : ""}
+            </div>
+          </div>
+        </a>
+      `).join("");
+    }
+
+    // Search
+    function normalise(s) { return (s || "").toLowerCase().replace(/[^a-z0-9 ]/g, " "); }
+
+    function filterAndSort() {
+      const q = normalise(document.getElementById("search-input").value);
+      const sort = document.getElementById("sort-select").value;
+
+      let filtered = allSets.filter(set => {
+        if (!q) return true;
+        const haystack = [set.name, set.year, set.country, set.city, set.giftedBy, set.description]
+          .map(normalise).join(" ");
+        return q.split(" ").every(word => haystack.includes(word));
+      });
+
+      filtered = sortSets(filtered, sort);
+      renderGallery(filtered);
+    }
+
+    function sortSets(sets, sort) {
+      return [...sets].sort((a, b) => {
+        switch (sort) {
+          case "newest": return (b.year || 0) - (a.year || 0);
+          case "oldest": return (a.year || 0) - (b.year || 0);
+          case "az": return (a.name || "").localeCompare(b.name || "");
+          case "za": return (b.name || "").localeCompare(a.name || "");
+          case "country-az": return (a.country || "").localeCompare(b.country || "");
+          case "country-za": return (b.country || "").localeCompare(a.country || "");
+          case "recently-added":
+          default:
+            return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
+        }
+      });
+    }
+
+    window.clearSearch = function() {
+      document.getElementById("search-input").value = "";
+      document.getElementById("search-clear").style.display = "none";
+      filterAndSort();
+    };
+
+    document.getElementById("search-input").addEventListener("input", (e) => {
+      document.getElementById("search-clear").style.display = e.target.value ? "block" : "none";
+      filterAndSort();
+    });
+    document.getElementById("search-clear").addEventListener("click", () => window.clearSearch());
+    document.getElementById("sort-select").addEventListener("change", filterAndSort);
+
+    loadSets();
+  </script>
+</body>
+</html>

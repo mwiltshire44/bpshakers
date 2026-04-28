@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Edit Set — The Salt & Pepper Collection</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet" />
+  <!-- Cropper.js -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" />
+  <link rel="stylesheet" href="../css/main.css" />
+</head>
+<body class="admin-page">
+
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="header-title">
+        <span class="header-eyebrow">Admin Panel</span>
+        <h1 class="site-title"><a href="../index.html" class="title-link">The Salt &amp; Pepper Shakers</a></h1>
+      </div>
+      <nav class="header-nav">
+        <a href="index.html" class="nav-link">← Manage Sets</a>
+        <a href="#" class="nav-link" id="logout-btn">Sign Out</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <div class="edit-form-wrap">
+      <h2 class="admin-heading" id="form-heading">Add New Set</h2>
+
+      <!-- Image Upload + Crop -->
+      <section class="form-section">
+        <h3 class="section-title">Photo</h3>
+
+        <div class="image-upload-area" id="upload-area">
+          <div class="upload-preview" id="upload-preview">
+            <img id="current-image" src="" alt="" style="display:none" />
+            <div class="upload-placeholder" id="upload-placeholder">
+              <span class="upload-icon">📷</span>
+              <span>Click or drag to upload an image</span>
+              <span class="upload-hint">JPG, PNG, WEBP — will be cropped to a square</span>
+            </div>
+          </div>
+          <input type="file" id="image-input" accept="image/*" class="file-input" />
+          <button type="button" class="btn-soft upload-btn" onclick="document.getElementById('image-input').click()">
+            Choose Image
+          </button>
+        </div>
+
+        <!-- Cropper Modal -->
+        <div class="cropper-modal" id="cropper-modal" style="display:none">
+          <div class="cropper-modal-inner">
+            <h3 class="cropper-title">Crop your image</h3>
+            <p class="cropper-hint">Drag to reposition. The square crop is what visitors will see.</p>
+            <div class="cropper-container">
+              <img id="crop-image" src="" alt="Crop" />
+            </div>
+            <div class="cropper-actions">
+              <button type="button" class="btn-soft" onclick="cancelCrop()">Cancel</button>
+              <button type="button" class="btn-primary" onclick="applyCrop()">Use this crop</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Set Info -->
+      <section class="form-section">
+        <h3 class="section-title">Set Information</h3>
+
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label class="form-label" for="f-name">Name <span class="required">*</span></label>
+            <input type="text" id="f-name" class="form-input" placeholder="e.g. Ceramic Roosters" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="f-year">Year Obtained</label>
+            <input type="number" id="f-year" class="form-input" placeholder="e.g. 1994" min="1800" max="2100" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="f-gifted">Gifted by</label>
+            <input type="text" id="f-gifted" class="form-input" placeholder="e.g. Aunt Margaret" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="f-country">Country <span class="required">*</span></label>
+            <input type="text" id="f-country" class="form-input" placeholder="e.g. Mexico" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="f-city">City <span class="form-optional">(optional)</span></label>
+            <input type="text" id="f-city" class="form-input" placeholder="e.g. Oaxaca" />
+          </div>
+          <div class="form-group full-width">
+            <label class="form-label" for="f-desc">Description <span class="form-optional">(optional)</span></label>
+            <textarea id="f-desc" class="form-input form-textarea" placeholder="Any notes, history, or details about this set…" rows="4"></textarea>
+          </div>
+        </div>
+      </section>
+
+      <div class="form-error" id="form-error" style="display:none"></div>
+      <div class="form-success" id="form-success" style="display:none"></div>
+
+      <div class="form-footer">
+        <a href="index.html" class="btn-soft">Cancel</a>
+        <button type="button" class="btn-primary" id="save-btn" onclick="saveSet()">Save Set</button>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <p>Admin Panel &mdash; The Salt &amp; Pepper Collection</p>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, collection, doc, getDoc, addDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { firebaseConfig } from "../js/firebase-config.js";
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
+    const auth = getAuth(app);
+
+    let cropper = null;
+    let croppedBlob = null;
+    let existingImageUrl = null;
+    let existingImagePath = null;
+    let editId = null;
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) { window.location.href = "login.html"; return; }
+      const params = new URLSearchParams(window.location.search);
+      editId = params.get("id");
+      if (editId) {
+        document.getElementById("form-heading").textContent = "Edit Set";
+        document.getElementById("save-btn").textContent = "Save Changes";
+        await loadExisting(editId);
+      }
+    });
+
+    document.getElementById("logout-btn").addEventListener("click", async (e) => {
+      e.preventDefault();
+      await signOut(auth);
+      window.location.href = "../index.html";
+    });
+
+    async function loadExisting(id) {
+      const snap = await getDoc(doc(db, "sets", id));
+      if (!snap.exists()) return;
+      const d = snap.data();
+      document.getElementById("f-name").value = d.name || "";
+      document.getElementById("f-year").value = d.year || "";
+      document.getElementById("f-gifted").value = d.giftedBy || "";
+      document.getElementById("f-country").value = d.country || "";
+      document.getElementById("f-city").value = d.city || "";
+      document.getElementById("f-desc").value = d.description || "";
+      if (d.imageUrl) {
+        existingImageUrl = d.imageUrl;
+        existingImagePath = d.imagePath || null;
+        const img = document.getElementById("current-image");
+        img.src = d.imageUrl;
+        img.style.display = "block";
+        document.getElementById("upload-placeholder").style.display = "none";
+      }
+    }
+
+    // Image input
+    document.getElementById("image-input").addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => openCropper(ev.target.result);
+      reader.readAsDataURL(file);
+    });
+
+    function openCropper(src) {
+      document.getElementById("cropper-modal").style.display = "flex";
+      const img = document.getElementById("crop-image");
+      img.src = src;
+      if (cropper) { cropper.destroy(); cropper = null; }
+      // slight delay for image to render
+      setTimeout(() => {
+        cropper = new Cropper(img, {
+          aspectRatio: 1,
+          viewMode: 2,
+          autoCropArea: 0.9,
+          movable: true,
+          zoomable: true,
+          scalable: false,
+          cropBoxResizable: true,
+        });
+      }, 100);
+    }
+
+    window.cancelCrop = function() {
+      if (cropper) { cropper.destroy(); cropper = null; }
+      document.getElementById("cropper-modal").style.display = "none";
+      document.getElementById("image-input").value = "";
+    };
+
+    window.applyCrop = function() {
+      if (!cropper) return;
+      const canvas = cropper.getCroppedCanvas({ width: 800, height: 800, imageSmoothingQuality: "high" });
+      canvas.toBlob((blob) => {
+        croppedBlob = blob;
+        const url = URL.createObjectURL(blob);
+        const img = document.getElementById("current-image");
+        img.src = url;
+        img.style.display = "block";
+        document.getElementById("upload-placeholder").style.display = "none";
+        cropper.destroy(); cropper = null;
+        document.getElementById("cropper-modal").style.display = "none";
+      }, "image/jpeg", 0.92);
+    };
+
+    window.saveSet = async function() {
+      const btn = document.getElementById("save-btn");
+      const errEl = document.getElementById("form-error");
+      const successEl = document.getElementById("form-success");
+      errEl.style.display = "none";
+      successEl.style.display = "none";
+
+      const name = document.getElementById("f-name").value.trim();
+      const country = document.getElementById("f-country").value.trim();
+      if (!name) { showError("Please enter a name for this set."); return; }
+      if (!country) { showError("Please enter a country of origin."); return; }
+      if (!croppedBlob && !existingImageUrl) { showError("Please upload and crop an image."); return; }
+
+      btn.disabled = true;
+      btn.textContent = "Saving…";
+
+      try {
+        let imageUrl = existingImageUrl;
+        let imagePath = existingImagePath;
+
+        if (croppedBlob) {
+          const filename = `sets/${Date.now()}_${name.replace(/\s+/g,"_").toLowerCase()}.jpg`;
+          const storageRef = ref(storage, filename);
+          await uploadBytes(storageRef, croppedBlob, { contentType: "image/jpeg" });
+          imageUrl = await getDownloadURL(storageRef);
+          // Delete old image if editing
+          if (existingImagePath) {
+            try { await deleteObject(ref(storage, existingImagePath)); } catch(e) {}
+          }
+          imagePath = filename;
+        }
+
+        const data = {
+          name,
+          country,
+          city: document.getElementById("f-city").value.trim(),
+          year: document.getElementById("f-year").value ? parseInt(document.getElementById("f-year").value) : null,
+          giftedBy: document.getElementById("f-gifted").value.trim(),
+          description: document.getElementById("f-desc").value.trim(),
+          imageUrl,
+          imagePath,
+        };
+
+        if (editId) {
+          await updateDoc(doc(db, "sets", editId), data);
+          showSuccess("Set updated successfully!");
+        } else {
+          data.createdAt = serverTimestamp();
+          await addDoc(collection(db, "sets"), data);
+          showSuccess("Set added successfully!");
+          // Clear form
+          setTimeout(() => window.location.href = "index.html", 1200);
+        }
+
+        btn.textContent = editId ? "Save Changes" : "Save Set";
+        btn.disabled = false;
+      } catch (e) {
+        showError("Error saving set: " + e.message);
+        btn.textContent = editId ? "Save Changes" : "Save Set";
+        btn.disabled = false;
+      }
+    };
+
+    function showError(msg) {
+      const el = document.getElementById("form-error");
+      el.textContent = msg;
+      el.style.display = "block";
+      el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    function showSuccess(msg) {
+      const el = document.getElementById("form-success");
+      el.textContent = msg;
+      el.style.display = "block";
+    }
+  </script>
+</body>
+</html>

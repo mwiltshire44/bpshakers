@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Set Detail — The Salt & Pepper Collection</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/main.css" />
+</head>
+<body class="set-page">
+
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="header-title">
+        <span class="header-eyebrow">A Family Collection</span>
+        <h1 class="site-title"><a href="index.html" class="title-link">The Salt &amp; Pepper Shakers</a></h1>
+        <span class="header-subtitle">Gathered with love, shared with joy</span>
+      </div>
+      <nav class="header-nav">
+        <a href="index.html" class="nav-link">← Gallery</a>
+        <a href="#" class="nav-link" id="admin-nav-link">Admin</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="main-content set-main">
+
+    <div id="set-loading" class="set-loading">
+      <div class="loading-dots"><span></span><span></span><span></span></div>
+      <p>Loading set…</p>
+    </div>
+
+    <article class="set-detail" id="set-detail" style="display:none">
+      <div class="set-image-side">
+        <div class="set-image-frame">
+          <img id="set-image" src="" alt="" class="set-image" />
+        </div>
+      </div>
+      <div class="set-info-side">
+        <div class="set-tag" id="set-tag"></div>
+        <h2 class="set-name" id="set-name"></h2>
+
+        <dl class="set-meta">
+          <div class="meta-row" id="row-year">
+            <dt>Year Obtained</dt>
+            <dd id="meta-year"></dd>
+          </div>
+          <div class="meta-row" id="row-origin">
+            <dt>Place of Origin</dt>
+            <dd id="meta-origin"></dd>
+          </div>
+          <div class="meta-row" id="row-gifted">
+            <dt>Gifted by</dt>
+            <dd id="meta-gifted"></dd>
+          </div>
+        </dl>
+
+        <div class="set-description-wrap" id="desc-wrap">
+          <h3 class="desc-label">About this set</h3>
+          <p class="set-description" id="set-description"></p>
+        </div>
+
+        <div class="set-actions">
+          <a href="index.html" class="btn-back">← Back to Gallery</a>
+          <a href="#" class="btn-edit" id="btn-edit" style="display:none">Edit Set</a>
+        </div>
+      </div>
+    </article>
+
+    <div id="set-error" class="set-error" style="display:none">
+      <p>This set could not be found.</p>
+      <a href="index.html" class="btn-soft">Return to Gallery</a>
+    </div>
+
+  </main>
+
+  <footer class="site-footer">
+    <p>A collection of treasures, lovingly catalogued &mdash; <span id="footer-year"></span></p>
+  </footer>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { firebaseConfig } from "./js/firebase-config.js";
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    document.getElementById("footer-year").textContent = new Date().getFullYear();
+
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("id");
+
+    onAuthStateChanged(auth, (user) => {
+      const link = document.getElementById("admin-nav-link");
+      if (user) {
+        link.href = "admin/index.html";
+        link.textContent = "Admin Panel";
+        if (id) {
+          const editBtn = document.getElementById("btn-edit");
+          editBtn.href = `admin/edit.html?id=${encodeURIComponent(id)}`;
+          editBtn.style.display = "inline-flex";
+        }
+      } else {
+        link.href = "admin/login.html";
+        link.textContent = "Admin";
+      }
+    });
+
+    function setText(id, val) {
+      document.getElementById(id).textContent = val || "";
+    }
+
+    function showRow(rowId, val) {
+      document.getElementById(rowId).style.display = val ? "" : "none";
+    }
+
+    async function loadSet() {
+      if (!id) { showError(); return; }
+      try {
+        const snap = await getDoc(doc(db, "sets", id));
+        if (!snap.exists()) { showError(); return; }
+
+        const set = snap.data();
+        document.title = `${set.name} — The Salt & Pepper Collection`;
+
+        document.getElementById("set-image").src = set.imageUrl || "img/placeholder.svg";
+        document.getElementById("set-image").alt = set.name;
+        setText("set-name", set.name);
+
+        // Tag from country
+        if (set.country) {
+          document.getElementById("set-tag").textContent = set.country;
+          document.getElementById("set-tag").style.display = "inline-block";
+        }
+
+        // Year
+        setText("meta-year", set.year || "");
+        showRow("row-year", set.year);
+
+        // Origin: city + country
+        const origin = [set.city, set.country].filter(Boolean).join(", ");
+        setText("meta-origin", origin);
+        showRow("row-origin", origin);
+
+        // Gifted by
+        setText("meta-gifted", set.giftedBy || "");
+        showRow("row-gifted", set.giftedBy);
+
+        // Description
+        if (set.description) {
+          setText("set-description", set.description);
+          document.getElementById("desc-wrap").style.display = "";
+        } else {
+          document.getElementById("desc-wrap").style.display = "none";
+        }
+
+        document.getElementById("set-loading").style.display = "none";
+        const detail = document.getElementById("set-detail");
+        detail.style.display = "";
+        requestAnimationFrame(() => detail.classList.add("visible"));
+
+      } catch (e) {
+        console.error(e);
+        showError();
+      }
+    }
+
+    function showError() {
+      document.getElementById("set-loading").style.display = "none";
+      document.getElementById("set-error").style.display = "block";
+    }
+
+    loadSet();
+  </script>
+</body>
+</html>
