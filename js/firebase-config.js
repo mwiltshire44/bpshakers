@@ -15,10 +15,10 @@
 // ============================================================
 
 export const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyAPNG0sylYJdjUmERiO01SmAHeZb0rAXcw",
+  authDomain: "salt-n-peppers.firebaseapp.com",
+  projectId: "salt-n-peppers",
+  storageBucket: "salt-n-peppers.firebasestorage.app",
+  messagingSenderId: "389174570890",
+  appId: "1:389174570890:web:2fbb6837dd5d2a8cc4e273"
 };
