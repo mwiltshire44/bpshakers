@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manage Categories — The Salt & Pepper Collection</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/main.css" />
+</head>
+<body class="admin-page">
+
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="header-title">
+        <span class="header-eyebrow">Admin Panel</span>
+        <h1 class="site-title"><a href="../index.html" class="title-link">The Salt &amp; Pepper Shakers</a></h1>
+      </div>
+      <nav class="header-nav">
+        <a href="index.html" class="nav-link">← Manage Sets</a>
+        <a href="#" class="nav-link" id="logout-btn">Sign Out</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <div class="edit-form-wrap">
+      <div class="admin-toolbar">
+        <h2 class="admin-heading">Manage Categories</h2>
+      </div>
+
+      <p class="categories-intro">Categories let visitors filter the gallery. Create as many as you like — then assign them to sets when adding or editing a set.</p>
+
+      <!-- Add new category -->
+      <section class="form-section">
+        <h3 class="section-title">Add a New Category</h3>
+        <div class="category-add-row">
+          <input type="text" id="new-cat-input" class="form-input" placeholder="e.g. Christmas, Animals, Vintage…" maxlength="40" />
+          <button class="btn-primary" onclick="addCategory()">Add Category</button>
+        </div>
+        <div class="form-error" id="cat-error" style="display:none"></div>
+        <div class="form-success" id="cat-success" style="display:none"></div>
+      </section>
+
+      <!-- Existing categories -->
+      <section class="form-section">
+        <h3 class="section-title">Existing Categories</h3>
+        <div id="cats-loading" class="admin-empty">
+          <div class="loading-dots"><span></span><span></span><span></span></div>
+        </div>
+        <div id="cats-list" class="cats-list"></div>
+        <div id="cats-empty" class="admin-empty" style="display:none">
+          <p>No categories yet. Add one above!</p>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <p>Admin Panel &mdash; The Salt &amp; Pepper Collection</p>
+  </footer>
+
+  <!-- Delete confirmation modal -->
+  <div class="modal-overlay" id="delete-modal" style="display:none">
+    <div class="modal-card">
+      <h3 class="modal-title">Delete this category?</h3>
+      <p class="modal-body">This will remove the "<span id="delete-cat-name"></span>" category. Sets that have this category assigned will simply no longer show it — they won't be deleted.</p>
+      <div class="modal-actions">
+        <button class="btn-soft" onclick="closeDeleteModal()">Cancel</button>
+        <button class="btn-danger" id="confirm-delete-btn" onclick="confirmDelete()">Yes, Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { firebaseConfig } from "../js/firebase-config.js";
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    let pendingDeleteId = null;
+
+    onAuthStateChanged(auth, (user) => {
+      if (!user) { window.location.href = "login.html"; return; }
+      loadCategories();
+    });
+
+    document.getElementById("logout-btn").addEventListener("click", async (e) => {
+      e.preventDefault();
+      await signOut(auth);
+      window.location.href = "../index.html";
+    });
+
+    // Allow Enter key to add
+    document.getElementById("new-cat-input").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") window.addCategory();
+    });
+
+    async function loadCategories() {
+      const loading = document.getElementById("cats-loading");
+      const list = document.getElementById("cats-list");
+      const empty = document.getElementById("cats-empty");
+
+      try {
+        const q = query(collection(db, "categories"), orderBy("name"));
+        const snap = await getDocs(q);
+        const cats = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        loading.style.display = "none";
+
+        if (cats.length === 0) {
+          empty.style.display = "block";
+          list.innerHTML = "";
+          return;
+        }
+
+        empty.style.display = "none";
+        list.innerHTML = cats.map(cat => `
+          <div class="cat-row" id="cat-${esc(cat.id)}">
+            <span class="cat-chip">${esc(cat.name)}</span>
+            <button class="btn-sm btn-del" onclick="openDeleteModal('${esc(cat.id)}', '${esc(cat.name)}')">Delete</button>
+          </div>
+        `).join("");
+      } catch (e) {
+        loading.innerHTML = `<p style="color:var(--clay)">Error loading categories: ${e.message}</p>`;
+      }
+    }
+
+    window.addCategory = async function() {
+      const input = document.getElementById("new-cat-input");
+      const name = input.value.trim();
+      const errEl = document.getElementById("cat-error");
+      const successEl = document.getElementById("cat-success");
+      errEl.style.display = "none";
+      successEl.style.display = "none";
+
+      if (!name) {
+        errEl.textContent = "Please enter a category name.";
+        errEl.style.display = "block";
+        return;
+      }
+
+      // Check for duplicate (case-insensitive)
+      const existing = document.querySelectorAll(".cat-chip");
+      for (const el of existing) {
+        if (el.textContent.toLowerCase() === name.toLowerCase()) {
+          errEl.textContent = `"${name}" already exists.`;
+          errEl.style.display = "block";
+          return;
+        }
+      }
+
+      try {
+        await addDoc(collection(db, "categories"), { name });
+        input.value = "";
+        successEl.textContent = `"${name}" added!`;
+        successEl.style.display = "block";
+        setTimeout(() => successEl.style.display = "none", 2500);
+        loadCategories();
+      } catch (e) {
+        errEl.textContent = "Error adding category: " + e.message;
+        errEl.style.display = "block";
+      }
+    };
+
+    window.openDeleteModal = function(id, name) {
+      pendingDeleteId = id;
+      document.getElementById("delete-cat-name").textContent = name;
+      document.getElementById("delete-modal").style.display = "flex";
+    };
+
+    window.closeDeleteModal = function() {
+      document.getElementById("delete-modal").style.display = "none";
+      pendingDeleteId = null;
+    };
+
+    window.confirmDelete = async function() {
+      if (!pendingDeleteId) return;
+      const btn = document.getElementById("confirm-delete-btn");
+      btn.textContent = "Deleting…";
+      btn.disabled = true;
+      try {
+        await deleteDoc(doc(db, "categories", pendingDeleteId));
+        closeDeleteModal();
+        loadCategories();
+      } catch (e) {
+        alert("Error deleting category: " + e.message);
+        btn.textContent = "Yes, Delete";
+        btn.disabled = false;
+      }
+    };
+
+    function esc(s) {
+      return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+    }
+  </script>
+</body>
+</html>

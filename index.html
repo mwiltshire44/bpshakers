@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Brenda's Salt and Pepper Shakers</title>
+  <title>The Salt & Pepper Collection</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet" />
@@ -14,9 +14,9 @@
   <header class="site-header">
     <div class="header-inner">
       <div class="header-title">
-        <span class="header-eyebrow">Brenda Picard's</span>
-        <h1 class="site-title">Salt &amp; Pepper Shakers</h1>
-        <span class="header-subtitle"></span>
+        <span class="header-eyebrow">A Family Collection</span>
+        <h1 class="site-title">The Salt &amp; Pepper Shakers</h1>
+        <span class="header-subtitle">Gathered with love, shared with joy</span>
       </div>
       <nav class="header-nav">
         <a href="index.html" class="nav-link active">Gallery</a>
@@ -39,14 +39,22 @@
       <div class="sort-wrap">
         <label class="sort-label" for="sort-select">Sort by</label>
         <select id="sort-select" class="sort-select">
+          <option value="recently-added">Recently added</option>
           <option value="newest">Newest first</option>
           <option value="oldest">Oldest first</option>
           <option value="az">Name A → Z</option>
           <option value="za">Name Z → A</option>
           <option value="country-az">Country A → Z</option>
           <option value="country-za">Country Z → A</option>
-          <option value="recently-added">Recently added</option>
         </select>
+      </div>
+    </div>
+
+    <!-- Category Filter Bar (shown once categories load) -->
+    <div class="category-filter-bar" id="category-filter-bar" style="display:none">
+      <span class="cat-filter-label">Category</span>
+      <div class="cat-filter-pills" id="cat-filter-pills">
+        <button class="cat-filter-btn active" data-cat="" onclick="selectCategory(this, '')">All</button>
       </div>
     </div>
 
@@ -62,32 +70,28 @@
     </div>
 
     <div class="gallery-empty" id="gallery-empty" style="display:none">
-      <p>No shakers found matching "<span id="empty-query"></span>"</p>
-      <button class="btn-soft" onclick="clearSearch()">Clear search</button>
+      <p id="empty-message">No shakers found.</p>
+      <button class="btn-soft" onclick="clearFilters()">Clear filters</button>
     </div>
 
   </main>
 
   <footer class="site-footer">
-    <p>A collection spanning more than 50 years &mdash; <span id="footer-year"></span></p>
+    <p>A collection of treasures, lovingly catalogued &mdash; <span id="footer-year"></span></p>
   </footer>
 
-  <!-- Firebase SDKs -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-    import { getStorage, ref, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import { firebaseConfig } from "./js/firebase-config.js";
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    const storage = getStorage(app);
     const auth = getAuth(app);
 
     document.getElementById("footer-year").textContent = new Date().getFullYear();
 
-    // Admin nav link
     onAuthStateChanged(auth, (user) => {
       const link = document.getElementById("admin-nav-link");
       if (user) {
@@ -100,20 +104,60 @@
     });
 
     let allSets = [];
+    let allCategories = [];
+    let activeCategory = ""; // "" = All
 
-    async function loadSets() {
+    // Load categories and sets in parallel
+    async function init() {
       try {
-        const q = query(collection(db, "sets"), orderBy("createdAt", "desc"));
-        const snapshot = await getDocs(q);
-        allSets = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        renderGallery(allSets);
+        const [setsSnap, catsSnap] = await Promise.all([
+          getDocs(query(collection(db, "sets"), orderBy("createdAt", "desc"))),
+          getDocs(query(collection(db, "categories"), orderBy("name")))
+        ]);
+
+        allSets = setsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        allCategories = catsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        buildCategoryBar();
+        filterAndSort();
       } catch (e) {
-        console.error("Error loading sets:", e);
-        document.getElementById("gallery-loading").innerHTML = '<p style="color:var(--clay)">Could not load the collection. Check your Firebase config.</p>';
+        console.error("Error loading data:", e);
+        document.getElementById("gallery-loading").innerHTML =
+          '<p style="color:var(--clay)">Could not load the collection. Check your Firebase config.</p>';
       }
     }
 
-    function escapeHtml(str) {
+    function buildCategoryBar() {
+      if (allCategories.length === 0) return;
+
+      const bar = document.getElementById("category-filter-bar");
+      const pills = document.getElementById("cat-filter-pills");
+
+      // Only show categories that are actually used by at least one set
+      const usedCatIds = new Set(allSets.flatMap(s => s.categories || []));
+      const visibleCats = allCategories.filter(c => usedCatIds.has(c.id));
+
+      if (visibleCats.length === 0) return;
+
+      bar.style.display = "flex";
+      visibleCats.forEach(cat => {
+        const btn = document.createElement("button");
+        btn.className = "cat-filter-btn";
+        btn.dataset.cat = cat.id;
+        btn.textContent = cat.name;
+        btn.onclick = () => selectCategory(btn, cat.id);
+        pills.appendChild(btn);
+      });
+    }
+
+    window.selectCategory = function(btn, catId) {
+      activeCategory = catId;
+      document.querySelectorAll(".cat-filter-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      filterAndSort();
+    };
+
+    function esc(str) {
       if (!str) return "";
       return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
     }
@@ -129,40 +173,50 @@
       if (sets.length === 0) {
         grid.innerHTML = "";
         empty.style.display = "block";
-        document.getElementById("empty-query").textContent = document.getElementById("search-input").value;
+        const q = document.getElementById("search-input").value.trim();
+        const catName = activeCategory
+          ? (allCategories.find(c => c.id === activeCategory)?.name || "")
+          : "";
+        let msg = "No shakers found";
+        if (q && catName) msg += ` matching "${q}" in ${catName}`;
+        else if (q) msg += ` matching "${q}"`;
+        else if (catName) msg += ` in ${catName}`;
+        document.getElementById("empty-message").textContent = msg + ".";
         info.textContent = "";
         return;
       }
 
       empty.style.display = "none";
 
-      const currentQuery = document.getElementById("search-input").value.trim();
-      if (currentQuery) {
-        info.textContent = `${sets.length} result${sets.length !== 1 ? "s" : ""} for "${currentQuery}"`;
-      } else {
-        info.textContent = `${sets.length} set${sets.length !== 1 ? "s" : ""} in the collection`;
-      }
+      // Build results info text
+      const q = document.getElementById("search-input").value.trim();
+      const catName = activeCategory
+        ? (allCategories.find(c => c.id === activeCategory)?.name || "")
+        : "";
+      let infoText = `${sets.length} set${sets.length !== 1 ? "s" : ""}`;
+      if (catName) infoText += ` in ${catName}`;
+      if (q) infoText += ` matching "${q}"`;
+      info.textContent = infoText;
 
       grid.innerHTML = sets.map((set, i) => `
-        <a href="set.html?id=${escapeHtml(set.id)}" class="gallery-card" style="animation-delay:${i * 40}ms">
+        <a href="set.html?id=${esc(set.id)}" class="gallery-card" style="animation-delay:${i * 40}ms">
           <div class="card-image-wrap">
             <img
-              src="${escapeHtml(set.imageUrl || "")}"
-              alt="${escapeHtml(set.name)}"
+              src="${esc(set.imageUrl || "")}"
+              alt="${esc(set.name)}"
               class="card-image"
               loading="lazy"
               onerror="this.src='img/placeholder.svg'"
             />
             <div class="card-overlay">
-              <span class="card-name">${escapeHtml(set.name)}</span>
-              ${set.country ? `<span class="card-country">${escapeHtml(set.country)}</span>` : ""}
+              <span class="card-name">${esc(set.name)}</span>
+              ${set.country ? `<span class="card-country">${esc(set.country)}</span>` : ""}
             </div>
           </div>
         </a>
       `).join("");
     }
 
-    // Search
     function normalise(s) { return (s || "").toLowerCase().replace(/[^a-z0-9 ]/g, " "); }
 
     function filterAndSort() {
@@ -170,10 +224,13 @@
       const sort = document.getElementById("sort-select").value;
 
       let filtered = allSets.filter(set => {
+        // Category filter
+        if (activeCategory && !(set.categories || []).includes(activeCategory)) return false;
+        // Text search
         if (!q) return true;
         const haystack = [set.name, set.year, set.country, set.city, set.giftedBy, set.description]
           .map(normalise).join(" ");
-        return q.split(" ").every(word => haystack.includes(word));
+        return q.split(" ").filter(Boolean).every(word => haystack.includes(word));
       });
 
       filtered = sortSets(filtered, sort);
@@ -183,33 +240,39 @@
     function sortSets(sets, sort) {
       return [...sets].sort((a, b) => {
         switch (sort) {
-          case "newest": return (b.year || 0) - (a.year || 0);
-          case "oldest": return (a.year || 0) - (b.year || 0);
-          case "az": return (a.name || "").localeCompare(b.name || "");
-          case "za": return (b.name || "").localeCompare(a.name || "");
-          case "country-az": return (a.country || "").localeCompare(b.country || "");
-          case "country-za": return (b.country || "").localeCompare(a.country || "");
+          case "newest":      return (b.year || 0) - (a.year || 0);
+          case "oldest":      return (a.year || 0) - (b.year || 0);
+          case "az":          return (a.name || "").localeCompare(b.name || "");
+          case "za":          return (b.name || "").localeCompare(a.name || "");
+          case "country-az":  return (a.country || "").localeCompare(b.country || "");
+          case "country-za":  return (b.country || "").localeCompare(a.country || "");
           case "recently-added":
-          default:
-            return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
+          default:            return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
         }
       });
     }
 
-    window.clearSearch = function() {
+    window.clearFilters = function() {
       document.getElementById("search-input").value = "";
       document.getElementById("search-clear").style.display = "none";
+      activeCategory = "";
+      document.querySelectorAll(".cat-filter-btn").forEach(b => b.classList.remove("active"));
+      const allBtn = document.querySelector(".cat-filter-btn[data-cat='']");
+      if (allBtn) allBtn.classList.add("active");
       filterAndSort();
     };
+
+    // Keep old clearSearch working too
+    window.clearSearch = window.clearFilters;
 
     document.getElementById("search-input").addEventListener("input", (e) => {
       document.getElementById("search-clear").style.display = e.target.value ? "block" : "none";
       filterAndSort();
     });
-    document.getElementById("search-clear").addEventListener("click", () => window.clearSearch());
+    document.getElementById("search-clear").addEventListener("click", () => window.clearFilters());
     document.getElementById("sort-select").addEventListener("change", filterAndSort);
 
-    loadSets();
+    init();
   </script>
 </body>
 </html>

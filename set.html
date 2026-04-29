@@ -57,6 +57,10 @@
           </div>
         </dl>
 
+        <div class="set-categories-wrap" id="cats-wrap" style="display:none">
+          <div class="set-categories" id="set-categories"></div>
+        </div>
+
         <div class="set-description-wrap" id="desc-wrap">
           <h3 class="desc-label">About this set</h3>
           <p class="set-description" id="set-description"></p>
@@ -82,7 +86,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import { firebaseConfig } from "./js/firebase-config.js";
 
@@ -150,6 +154,21 @@
         // Gifted by
         setText("meta-gifted", set.giftedBy || "");
         showRow("row-gifted", set.giftedBy);
+
+        // Categories
+        if (set.categories && set.categories.length > 0) {
+          try {
+            const catsSnap = await getDocs(collection(db, "categories"));
+            const catMap = {};
+            catsSnap.docs.forEach(d => { catMap[d.id] = d.data().name; });
+            const names = set.categories.map(cid => catMap[cid]).filter(Boolean);
+            if (names.length > 0) {
+              document.getElementById("set-categories").innerHTML = names
+                .map(n => `<span class="set-cat-chip">${n}</span>`).join("");
+              document.getElementById("cats-wrap").style.display = "";
+            }
+          } catch(e) { /* categories are non-critical, fail silently */ }
+        }
 
         // Description
         if (set.description) {

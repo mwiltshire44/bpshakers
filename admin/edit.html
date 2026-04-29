@@ -7,7 +7,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet" />
-  <!-- Cropper.js -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" />
   <link rel="stylesheet" href="../css/main.css" />
 </head>
@@ -33,7 +32,6 @@
       <!-- Image Upload + Crop -->
       <section class="form-section">
         <h3 class="section-title">Photo</h3>
-
         <div class="image-upload-area" id="upload-area">
           <div class="upload-preview" id="upload-preview">
             <img id="current-image" src="" alt="" style="display:none" />
@@ -53,9 +51,15 @@
         <div class="cropper-modal" id="cropper-modal" style="display:none">
           <div class="cropper-modal-inner">
             <h3 class="cropper-title">Crop your image</h3>
-            <p class="cropper-hint">Drag to reposition. The square crop is what visitors will see.</p>
-            <div class="cropper-container">
+            <p class="cropper-hint">Drag to move • Pinch or use the slider to zoom • The square is what visitors will see</p>
+            <div class="cropper-canvas-wrap">
               <img id="crop-image" src="" alt="Crop" />
+            </div>
+            <div class="cropper-zoom-bar">
+              <label>Zoom</label>
+              <button class="zoom-btn" id="zoom-out-btn" type="button" title="Zoom out">−</button>
+              <input type="range" class="zoom-slider" id="zoom-slider" min="0" max="100" value="50" />
+              <button class="zoom-btn" id="zoom-in-btn" type="button" title="Zoom in">+</button>
             </div>
             <div class="cropper-actions">
               <button type="button" class="btn-soft" onclick="cancelCrop()">Cancel</button>
@@ -68,7 +72,6 @@
       <!-- Set Info -->
       <section class="form-section">
         <h3 class="section-title">Set Information</h3>
-
         <div class="form-grid">
           <div class="form-group full-width">
             <label class="form-label" for="f-name">Name <span class="required">*</span></label>
@@ -97,6 +100,17 @@
         </div>
       </section>
 
+      <!-- Categories -->
+      <section class="form-section">
+        <h3 class="section-title">Categories</h3>
+        <p class="section-hint">Assign one or more categories to this set. Visitors can filter the gallery by category.</p>
+        <div id="cats-loading" class="section-hint" style="font-style:italic; margin-top:12px">Loading categories…</div>
+        <div id="cats-checkboxes" class="cats-checkboxes" style="display:none"></div>
+        <div id="cats-none" style="display:none; margin-top:12px">
+          <p class="section-hint">No categories exist yet. <a href="categories.html" target="_blank" class="inline-link">Create some here</a>, then come back.</p>
+        </div>
+      </section>
+
       <div class="form-error" id="form-error" style="display:none"></div>
       <div class="form-success" id="form-success" style="display:none"></div>
 
@@ -114,7 +128,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, collection, doc, getDoc, addDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getFirestore, collection, doc, getDoc, getDocs, addDoc, updateDoc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
     import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import { firebaseConfig } from "../js/firebase-config.js";
@@ -134,6 +148,7 @@
       if (!user) { window.location.href = "login.html"; return; }
       const params = new URLSearchParams(window.location.search);
       editId = params.get("id");
+      await loadCategories();
       if (editId) {
         document.getElementById("form-heading").textContent = "Edit Set";
         document.getElementById("save-btn").textContent = "Save Changes";
@@ -147,6 +162,31 @@
       window.location.href = "../index.html";
     });
 
+    async function loadCategories() {
+      const loadingEl = document.getElementById("cats-loading");
+      const checkboxEl = document.getElementById("cats-checkboxes");
+      const noneEl = document.getElementById("cats-none");
+      try {
+        const q = query(collection(db, "categories"), orderBy("name"));
+        const snap = await getDocs(q);
+        const cats = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        loadingEl.style.display = "none";
+        if (cats.length === 0) {
+          noneEl.style.display = "block";
+          return;
+        }
+        checkboxEl.style.display = "flex";
+        checkboxEl.innerHTML = cats.map(cat => `
+          <label class="cat-checkbox-label" for="cat-${cat.id}">
+            <input type="checkbox" id="cat-${cat.id}" value="${cat.id}" class="cat-checkbox" />
+            <span class="cat-checkbox-text">${escHtml(cat.name)}</span>
+          </label>
+        `).join("");
+      } catch (e) {
+        loadingEl.textContent = "Could not load categories.";
+      }
+    }
+
     async function loadExisting(id) {
       const snap = await getDoc(doc(db, "sets", id));
       if (!snap.exists()) return;
@@ -157,6 +197,12 @@
       document.getElementById("f-country").value = d.country || "";
       document.getElementById("f-city").value = d.city || "";
       document.getElementById("f-desc").value = d.description || "";
+      if (d.categories && Array.isArray(d.categories)) {
+        d.categories.forEach(catId => {
+          const cb = document.getElementById(`cat-${catId}`);
+          if (cb) cb.checked = true;
+        });
+      }
       if (d.imageUrl) {
         existingImageUrl = d.imageUrl;
         existingImagePath = d.imagePath || null;
@@ -167,7 +213,6 @@
       }
     }
 
-    // Image input
     document.getElementById("image-input").addEventListener("change", (e) => {
       const file = e.target.files[0];
       if (!file) return;
@@ -176,24 +221,73 @@
       reader.readAsDataURL(file);
     });
 
+    // Track zoom level (0–1 normalized)
+    let zoomRatio = 0;
+
     function openCropper(src) {
       document.getElementById("cropper-modal").style.display = "flex";
       const img = document.getElementById("crop-image");
-      img.src = src;
+
+      // Destroy previous instance cleanly
       if (cropper) { cropper.destroy(); cropper = null; }
-      // slight delay for image to render
-      setTimeout(() => {
+
+      // Reset src to force reload
+      img.src = "";
+      img.onload = null;
+
+      img.onload = () => {
         cropper = new Cropper(img, {
           aspectRatio: 1,
-          viewMode: 2,
-          autoCropArea: 0.9,
+          viewMode: 1,          // image must fill the crop box area
+          dragMode: 'move',     // drag moves the image, not the box
+          autoCropArea: 1,      // crop box fills the whole canvas by default
           movable: true,
           zoomable: true,
+          zoomOnWheel: true,
           scalable: false,
-          cropBoxResizable: true,
+          cropBoxMovable: false,  // box is fixed; image moves under it
+          cropBoxResizable: false,
+          toggleDragModeOnDblclick: false,
+          ready() {
+            // Set initial slider position to match default zoom
+            zoomRatio = 0.5;
+            document.getElementById("zoom-slider").value = 50;
+          },
+          zoom(e) {
+            // Keep our slider in sync when scroll-wheel zooms
+            const ratio = e.detail.ratio;
+            const old = e.detail.oldRatio;
+            // Clamp to sane bounds
+            if (ratio < 0.05 || ratio > 10) { e.preventDefault(); return; }
+          }
         });
-      }, 100);
+      };
+
+      img.src = src;
     }
+
+    // Zoom slider
+    document.getElementById("zoom-slider").addEventListener("input", (e) => {
+      if (!cropper) return;
+      // Map 0–100 slider to a zoom multiplier 0.5x–4x
+      const val = parseInt(e.target.value);
+      const zoomTo = 0.5 + (val / 100) * 3.5;
+      cropper.zoomTo(zoomTo);
+    });
+
+    document.getElementById("zoom-in-btn").addEventListener("click", () => {
+      if (!cropper) return;
+      const slider = document.getElementById("zoom-slider");
+      slider.value = Math.min(100, parseInt(slider.value) + 10);
+      slider.dispatchEvent(new Event("input"));
+    });
+
+    document.getElementById("zoom-out-btn").addEventListener("click", () => {
+      if (!cropper) return;
+      const slider = document.getElementById("zoom-slider");
+      slider.value = Math.max(0, parseInt(slider.value) - 10);
+      slider.dispatchEvent(new Event("input"));
+    });
 
     window.cancelCrop = function() {
       if (cropper) { cropper.destroy(); cropper = null; }
@@ -203,8 +297,15 @@
 
     window.applyCrop = function() {
       if (!cropper) return;
-      const canvas = cropper.getCroppedCanvas({ width: 800, height: 800, imageSmoothingQuality: "high" });
+      const canvas = cropper.getCroppedCanvas({
+        width: 800,
+        height: 800,
+        imageSmoothingEnabled: true,
+        imageSmoothingQuality: "high"
+      });
+      if (!canvas) { alert("Could not crop image. Please try again."); return; }
       canvas.toBlob((blob) => {
+        if (!blob) { alert("Could not process image. Please try a different file."); return; }
         croppedBlob = blob;
         const url = URL.createObjectURL(blob);
         const img = document.getElementById("current-image");
@@ -229,6 +330,10 @@
       if (!country) { showError("Please enter a country of origin."); return; }
       if (!croppedBlob && !existingImageUrl) { showError("Please upload and crop an image."); return; }
 
+      const selectedCategories = Array.from(
+        document.querySelectorAll(".cat-checkbox:checked")
+      ).map(cb => cb.value);
+
       btn.disabled = true;
       btn.textContent = "Saving…";
 
@@ -241,7 +346,6 @@
           const storageRef = ref(storage, filename);
           await uploadBytes(storageRef, croppedBlob, { contentType: "image/jpeg" });
           imageUrl = await getDownloadURL(storageRef);
-          // Delete old image if editing
           if (existingImagePath) {
             try { await deleteObject(ref(storage, existingImagePath)); } catch(e) {}
           }
@@ -249,14 +353,13 @@
         }
 
         const data = {
-          name,
-          country,
+          name, country,
           city: document.getElementById("f-city").value.trim(),
           year: document.getElementById("f-year").value ? parseInt(document.getElementById("f-year").value) : null,
           giftedBy: document.getElementById("f-gifted").value.trim(),
           description: document.getElementById("f-desc").value.trim(),
-          imageUrl,
-          imagePath,
+          categories: selectedCategories,
+          imageUrl, imagePath,
         };
 
         if (editId) {
@@ -266,10 +369,8 @@
           data.createdAt = serverTimestamp();
           await addDoc(collection(db, "sets"), data);
           showSuccess("Set added successfully!");
-          // Clear form
           setTimeout(() => window.location.href = "index.html", 1200);
         }
-
         btn.textContent = editId ? "Save Changes" : "Save Set";
         btn.disabled = false;
       } catch (e) {
@@ -285,11 +386,13 @@
       el.style.display = "block";
       el.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
-
     function showSuccess(msg) {
       const el = document.getElementById("form-success");
       el.textContent = msg;
       el.style.display = "block";
+    }
+    function escHtml(s) {
+      return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
     }
   </script>
 </body>
