@@ -511,11 +511,12 @@
         if (editId) {
           await updateDoc(doc(db, "sets", editId), data);
           showSuccess("Set updated successfully!");
+          setTimeout(() => window.location.href = "index.html", 1000);
         } else {
           data.createdAt = serverTimestamp();
           await addDoc(collection(db, "sets"), data);
           showSuccess("Set added successfully!");
-          setTimeout(() => window.location.href = "index.html", 1200);
+          setTimeout(() => window.location.href = "index.html", 1000);
         }
         btn.textContent = editId ? "Save Changes" : "Save Set";
         btn.disabled = false;
