@@ -212,7 +212,7 @@
       `).join("");
     }
 
-    function normalise(s) { return (s || "").toLowerCase().replace(/[^a-z0-9 ]/g, " "); }
+    function normalise(s) { return String(s || "").toLowerCase().replace(/[^a-z0-9 ]/g, " "); }
 
     function filterAndSort() {
       const q = normalise(document.getElementById("search-input").value);
