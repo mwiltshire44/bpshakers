@@ -8,6 +8,112 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="../css/main.css" />
+  <style>
+    /* ── Inline category row ── */
+    .cat-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 11px 0;
+      border-bottom: 1px solid rgba(200,170,130,0.25);
+      gap: 12px;
+      min-height: 52px;
+    }
+    .cat-row:last-child { border-bottom: none; }
+
+    /* Static view */
+    .cat-row-view {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      gap: 12px;
+    }
+    .cat-name-text {
+      font-family: 'Lora', serif;
+      font-size: 0.95rem;
+      color: var(--text);
+      flex: 1;
+    }
+    .cat-row-btns {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    /* Edit view */
+    .cat-row-edit {
+      display: none;
+      align-items: center;
+      width: 100%;
+      gap: 10px;
+    }
+    .cat-row.editing .cat-row-view { display: none; }
+    .cat-row.editing .cat-row-edit { display: flex; }
+
+    .cat-edit-input {
+      font-family: 'Lora', serif;
+      font-size: 0.95rem;
+      color: var(--text);
+      border: 2px solid var(--clay);
+      border-radius: var(--radius-sm);
+      padding: 5px 10px;
+      background: var(--cream);
+      outline: none;
+      min-width: 80px;
+      width: auto;
+      /* grows with content */
+      flex: 0 1 auto;
+      max-width: 340px;
+      box-shadow: 0 0 0 3px rgba(184,92,56,0.12);
+      transition: border-color 0.2s;
+    }
+    .cat-edit-input:focus {
+      border-color: var(--clay-dark);
+    }
+
+    .btn-confirm {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 14px;
+      border-radius: var(--radius-sm);
+      font-family: 'Lora', serif;
+      font-size: 0.82rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1.5px solid #4a7a4a;
+      background: #edf5ed;
+      color: #2d5a2d;
+      transition: background 0.18s, border-color 0.18s;
+      white-space: nowrap;
+    }
+    .btn-confirm:hover { background: #d4ebd4; border-color: #2d5a2d; }
+    .btn-confirm:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .btn-cancel-edit {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      font-family: 'Lora', serif;
+      font-size: 0.82rem;
+      cursor: pointer;
+      border: 1.5px solid var(--parchment);
+      background: var(--cream-dark);
+      color: var(--text-muted);
+      transition: background 0.18s;
+    }
+    .btn-cancel-edit:hover { background: var(--parchment); }
+
+    .cat-edit-error {
+      font-family: 'Lora', serif;
+      font-size: 0.78rem;
+      color: var(--clay-dark);
+      font-style: italic;
+      flex-shrink: 0;
+    }
+  </style>
 </head>
 <body class="admin-page">
 
@@ -39,8 +145,8 @@
           <input type="text" id="new-cat-input" class="form-input" placeholder="e.g. Christmas, Animals, Vintage…" maxlength="40" />
           <button class="btn-primary" onclick="addCategory()">Add Category</button>
         </div>
-        <div class="form-error" id="cat-error" style="display:none"></div>
-        <div class="form-success" id="cat-success" style="display:none"></div>
+        <div class="form-error" id="cat-error" style="display:none; margin-top:10px"></div>
+        <div class="form-success" id="cat-success" style="display:none; margin-top:10px"></div>
       </section>
 
       <!-- Existing categories -->
@@ -65,7 +171,7 @@
   <div class="modal-overlay" id="delete-modal" style="display:none">
     <div class="modal-card">
       <h3 class="modal-title">Delete this category?</h3>
-      <p class="modal-body">This will remove the "<span id="delete-cat-name"></span>" category. Sets that have this category assigned will simply no longer show it — they won't be deleted.</p>
+      <p class="modal-body">This will remove "<span id="delete-cat-name"></span>". Sets that have this category assigned will simply no longer show it — they won't be deleted.</p>
       <div class="modal-actions">
         <button class="btn-soft" onclick="closeDeleteModal()">Cancel</button>
         <button class="btn-danger" id="confirm-delete-btn" onclick="confirmDelete()">Yes, Delete</button>
@@ -75,7 +181,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc, updateDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import { firebaseConfig } from "../js/firebase-config.js";
 
@@ -84,6 +190,7 @@
     const auth = getAuth(app);
 
     let pendingDeleteId = null;
+    let categories = []; // keep in memory for duplicate checks
 
     onAuthStateChanged(auth, (user) => {
       if (!user) { window.location.href = "login.html"; return; }
@@ -96,7 +203,6 @@
       window.location.href = "../index.html";
     });
 
-    // Allow Enter key to add
     document.getElementById("new-cat-input").addEventListener("keydown", (e) => {
       if (e.key === "Enter") window.addCategory();
     });
@@ -105,31 +211,161 @@
       const loading = document.getElementById("cats-loading");
       const list = document.getElementById("cats-list");
       const empty = document.getElementById("cats-empty");
+      loading.style.display = "block";
+      list.innerHTML = "";
 
       try {
         const q = query(collection(db, "categories"), orderBy("name"));
         const snap = await getDocs(q);
-        const cats = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        categories = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
         loading.style.display = "none";
 
-        if (cats.length === 0) {
+        if (categories.length === 0) {
           empty.style.display = "block";
-          list.innerHTML = "";
           return;
         }
 
         empty.style.display = "none";
-        list.innerHTML = cats.map(cat => `
-          <div class="cat-row" id="cat-${esc(cat.id)}">
-            <span class="cat-chip">${esc(cat.name)}</span>
-            <button class="btn-sm btn-del" onclick="openDeleteModal('${esc(cat.id)}', '${esc(cat.name)}')">Delete</button>
-          </div>
-        `).join("");
+        list.innerHTML = categories.map(cat => buildCatRowHTML(cat)).join("");
+
+        // Wire up dynamic-width behaviour for all edit inputs
+        list.querySelectorAll(".cat-edit-input").forEach(wireInputWidth);
+
       } catch (e) {
         loading.innerHTML = `<p style="color:var(--clay)">Error loading categories: ${e.message}</p>`;
       }
     }
+
+    function buildCatRowHTML(cat) {
+      return `
+        <div class="cat-row" id="cat-row-${esc(cat.id)}">
+
+          <!-- Static view -->
+          <div class="cat-row-view">
+            <span class="cat-name-text">${esc(cat.name)}</span>
+            <div class="cat-row-btns">
+              <button class="btn-sm btn-edit-sm" onclick="startEdit('${esc(cat.id)}')">Edit</button>
+              <button class="btn-sm btn-del" onclick="openDeleteModal('${esc(cat.id)}', '${esc(cat.name)}')">Delete</button>
+            </div>
+          </div>
+
+          <!-- Edit view -->
+          <div class="cat-row-edit">
+            <input
+              type="text"
+              class="cat-edit-input"
+              id="edit-input-${esc(cat.id)}"
+              value="${esc(cat.name)}"
+              maxlength="40"
+              aria-label="Edit category name"
+            />
+            <button class="btn-confirm" onclick="saveEdit('${esc(cat.id)}')">Confirm</button>
+            <button class="btn-cancel-edit" onclick="cancelEdit('${esc(cat.id)}')">Cancel</button>
+            <span class="cat-edit-error" id="edit-error-${esc(cat.id)}"></span>
+          </div>
+
+        </div>
+      `;
+    }
+
+    // Make the input grow/shrink with its content using a hidden sizer span
+    function wireInputWidth(input) {
+      const sizer = document.createElement("span");
+      sizer.style.cssText = `
+        position:absolute; visibility:hidden; white-space:pre;
+        font-family:'Lora',serif; font-size:0.95rem; padding:5px 10px;
+        pointer-events:none;
+      `;
+      document.body.appendChild(sizer);
+
+      function resize() {
+        sizer.textContent = input.value || input.placeholder || " ";
+        const w = Math.max(80, Math.min(340, sizer.offsetWidth + 24));
+        input.style.width = w + "px";
+      }
+      input.addEventListener("input", resize);
+      resize();
+
+      // Enter = confirm, Escape = cancel
+      const id = input.id.replace("edit-input-", "");
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") { e.preventDefault(); window.saveEdit(id); }
+        if (e.key === "Escape") { e.preventDefault(); window.cancelEdit(id); }
+      });
+    }
+
+    window.startEdit = function(id) {
+      // Cancel any other open edits first
+      document.querySelectorAll(".cat-row.editing").forEach(row => {
+        const otherId = row.id.replace("cat-row-", "");
+        if (otherId !== id) cancelEdit(otherId);
+      });
+
+      const row = document.getElementById(`cat-row-${id}`);
+      row.classList.add("editing");
+      const input = document.getElementById(`edit-input-${id}`);
+      input.focus();
+      input.select();
+    };
+
+    window.cancelEdit = function(id) {
+      const row = document.getElementById(`cat-row-${id}`);
+      row.classList.remove("editing");
+      // Restore original value
+      const cat = categories.find(c => c.id === id);
+      if (cat) {
+        const input = document.getElementById(`edit-input-${id}`);
+        input.value = cat.name;
+        input.dispatchEvent(new Event("input")); // resize
+      }
+      document.getElementById(`edit-error-${id}`).textContent = "";
+    };
+
+    window.saveEdit = async function(id) {
+      const input = document.getElementById(`edit-input-${id}`);
+      const errEl = document.getElementById(`edit-error-${id}`);
+      const newName = input.value.trim();
+      errEl.textContent = "";
+
+      if (!newName) {
+        errEl.textContent = "Name can't be empty.";
+        input.focus();
+        return;
+      }
+
+      // Check for duplicate (case-insensitive, excluding self)
+      const duplicate = categories.find(c => c.id !== id && c.name.toLowerCase() === newName.toLowerCase());
+      if (duplicate) {
+        errEl.textContent = `"${newName}" already exists.`;
+        input.focus();
+        return;
+      }
+
+      const confirmBtn = input.closest(".cat-row-edit").querySelector(".btn-confirm");
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = "Saving…";
+
+      try {
+        await updateDoc(doc(db, "categories", id), { name: newName });
+        // Update local cache
+        const cat = categories.find(c => c.id === id);
+        if (cat) cat.name = newName;
+        // Update the static label without a full reload
+        const row = document.getElementById(`cat-row-${id}`);
+        row.querySelector(".cat-name-text").textContent = newName;
+        row.querySelector(`#edit-input-${id}`).value = newName;
+        // Update delete button onclick with new name
+        row.querySelector(".btn-del").setAttribute("onclick", `openDeleteModal('${esc(id)}', '${esc(newName)}')`);
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = "Confirm";
+        row.classList.remove("editing");
+      } catch (e) {
+        errEl.textContent = "Save failed: " + e.message;
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = "Confirm";
+      }
+    };
 
     window.addCategory = async function() {
       const input = document.getElementById("new-cat-input");
@@ -145,14 +381,11 @@
         return;
       }
 
-      // Check for duplicate (case-insensitive)
-      const existing = document.querySelectorAll(".cat-chip");
-      for (const el of existing) {
-        if (el.textContent.toLowerCase() === name.toLowerCase()) {
-          errEl.textContent = `"${name}" already exists.`;
-          errEl.style.display = "block";
-          return;
-        }
+      const duplicate = categories.find(c => c.name.toLowerCase() === name.toLowerCase());
+      if (duplicate) {
+        errEl.textContent = `"${name}" already exists.`;
+        errEl.style.display = "block";
+        return;
       }
 
       try {
@@ -189,7 +422,7 @@
         closeDeleteModal();
         loadCategories();
       } catch (e) {
-        alert("Error deleting category: " + e.message);
+        alert("Error deleting: " + e.message);
         btn.textContent = "Yes, Delete";
         btn.disabled = false;
       }

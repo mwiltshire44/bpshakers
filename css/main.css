@@ -52,13 +52,13 @@ a { color: inherit; text-decoration: none; }
 
 /* --- Header --- */
 .site-header {
-  background: linear-gradient(135deg, var(--espresso) 0%, var(--wood) 100%);
+  background: linear-gradient(135deg, #7a3e28 0%, #b85c38 60%, #c9684a 100%);
   color: var(--cream);
   padding: 0;
   position: sticky;
   top: 0;
   z-index: 100;
-  box-shadow: 0 2px 16px rgba(46,26,14,0.35);
+  box-shadow: 0 2px 20px rgba(120,50,30,0.30);
 }
 
 .header-inner {
@@ -543,14 +543,14 @@ a { color: inherit; text-decoration: none; }
 
 /* --- Footer --- */
 .site-footer {
-  background: var(--espresso);
-  color: var(--parchment);
+  background: linear-gradient(135deg, #7a3e28 0%, #b85c38 100%);
+  color: var(--cream);
   text-align: center;
   padding: 20px 32px;
   font-family: 'Lora', serif;
   font-size: 0.8rem;
   font-style: italic;
-  opacity: 0.85;
+  opacity: 0.92;
 }
 
 /* --- Login Page --- */
