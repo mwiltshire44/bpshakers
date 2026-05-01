@@ -269,7 +269,7 @@ a { color: inherit; text-decoration: none; }
 .card-image-wrap {
   position: relative;
   width: 100%;
-  padding-bottom: 100%; /* square */
+  padding-bottom: 75%; /* 4:3 */
   overflow: hidden;
   background: var(--cream-dark);
 }
@@ -381,7 +381,7 @@ a { color: inherit; text-decoration: none; }
   overflow: hidden;
   box-shadow: var(--shadow-lg), 0 0 0 6px var(--cream-card), 0 0 0 8px var(--parchment);
   background: var(--cream-dark);
-  aspect-ratio: 1;
+  aspect-ratio: 4 / 3;
 }
 
 .set-image {
@@ -821,7 +821,7 @@ a { color: inherit; text-decoration: none; }
 
 .upload-preview {
   width: 280px;
-  height: 280px;
+  height: 210px;
   border-radius: var(--radius);
   border: 2px dashed var(--parchment);
   background: var(--cream-dark);
@@ -861,72 +861,62 @@ a { color: inherit; text-decoration: none; }
 .cropper-modal {
   position: fixed;
   inset: 0;
-  background: rgba(46,26,14,0.82);
-  z-index: 2000;
+  background: rgba(10, 5, 2, 0.92);
+  z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 16px;
-  backdrop-filter: blur(4px);
-  overflow-y: auto;
 }
 
 .cropper-modal-inner {
-  background: var(--cream-card);
+  background: #fff;
   border-radius: var(--radius-lg);
-  padding: 28px 28px 24px;
-  max-width: 680px;
+  padding: 24px;
+  max-width: 540px;
   width: 100%;
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 32px 80px rgba(0,0,0,0.6);
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 14px;
 }
 
 .cropper-title {
   font-family: 'Playfair Display', serif;
-  font-size: 1.3rem;
+  font-size: 1.25rem;
   color: var(--espresso);
-  margin-bottom: 4px;
+  margin: 0;
 }
 
 .cropper-hint {
-  font-size: 0.83rem;
-  color: var(--text-light);
+  font-size: 0.82rem;
+  color: var(--text-muted);
   font-style: italic;
-  margin-bottom: 14px;
+  margin: -8px 0 0;
 }
 
-/* The actual cropper canvas area — fixed height, no overflow clipping */
-.cropper-canvas-wrap {
-  width: 100%;
-  height: 400px;
-  background: #1a1008;
-  border-radius: var(--radius);
-  overflow: hidden; /* contains the canvas but not the crop box UI */
-  margin-bottom: 14px;
-  position: relative;
-}
-
-.cropper-canvas-wrap img {
-  /* Cropper.js replaces this — just needs to exist in DOM */
+#crop-canvas {
   display: block;
-  max-width: 100%;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius);
+  cursor: grab;
+  touch-action: none;
+  border: 2px solid var(--parchment);
+  background: #111;
 }
+#crop-canvas:active { cursor: grabbing; }
 
-/* Zoom controls */
 .cropper-zoom-bar {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 16px;
-  padding: 0 2px;
 }
 
 .cropper-zoom-bar label {
   font-family: 'Lora', serif;
   font-size: 0.8rem;
-  color: var(--text-light);
+  color: var(--text-muted);
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -935,27 +925,23 @@ a { color: inherit; text-decoration: none; }
   flex: 1;
   -webkit-appearance: none;
   appearance: none;
-  height: 4px;
+  height: 5px;
   border-radius: 4px;
   background: var(--parchment);
   outline: none;
   cursor: pointer;
 }
-
 .zoom-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 18px;
-  height: 18px;
+  width: 22px; height: 22px;
   border-radius: 50%;
   background: var(--clay);
   cursor: pointer;
   border: 2px solid #fff;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
 }
-
 .zoom-slider::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
+  width: 22px; height: 22px;
   border-radius: 50%;
   background: var(--clay);
   cursor: pointer;
@@ -964,15 +950,15 @@ a { color: inherit; text-decoration: none; }
 
 .zoom-btn {
   background: var(--cream-dark);
-  border: 1px solid var(--parchment);
+  border: 1.5px solid var(--parchment);
   border-radius: var(--radius-sm);
-  width: 32px;
-  height: 32px;
+  width: 36px; height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 1.1rem;
+  font-size: 1.3rem;
+  font-weight: bold;
   color: var(--text-muted);
   flex-shrink: 0;
   transition: background var(--transition);
@@ -987,8 +973,7 @@ a { color: inherit; text-decoration: none; }
 }
 
 @media (max-width: 600px) {
-  .cropper-canvas-wrap { height: 280px; }
-  .cropper-modal-inner { padding: 20px 16px 18px; }
+  .cropper-modal-inner { padding: 16px; gap: 12px; }
 }
 
 /* --- Delete Confirmation Modal --- */

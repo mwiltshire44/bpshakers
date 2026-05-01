@@ -7,7 +7,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" />
   <link rel="stylesheet" href="../css/main.css" />
 </head>
 <body class="admin-page">
@@ -32,12 +31,12 @@
       <!-- Image Upload + Crop -->
       <section class="form-section">
         <h3 class="section-title">Photo</h3>
-        <div class="image-upload-area" id="upload-area">
+        <div class="image-upload-area">
           <div class="upload-preview" id="upload-preview">
             <img id="current-image" src="" alt="" style="display:none" />
             <div class="upload-placeholder" id="upload-placeholder">
               <span class="upload-icon">📷</span>
-              <span>Click or drag to upload an image</span>
+              <span>Click to upload an image</span>
               <span class="upload-hint">JPG, PNG, WEBP — will be cropped to a square</span>
             </div>
           </div>
@@ -46,28 +45,26 @@
             Choose Image
           </button>
         </div>
+      </section>
 
-        <!-- Cropper Modal -->
-        <div class="cropper-modal" id="cropper-modal" style="display:none">
-          <div class="cropper-modal-inner">
-            <h3 class="cropper-title">Crop your image</h3>
-            <p class="cropper-hint">Drag to move • Pinch or use the slider to zoom • The square is what visitors will see</p>
-            <div class="cropper-canvas-wrap">
-              <img id="crop-image" src="" alt="Crop" />
-            </div>
-            <div class="cropper-zoom-bar">
-              <label>Zoom</label>
-              <button class="zoom-btn" id="zoom-out-btn" type="button" title="Zoom out">−</button>
-              <input type="range" class="zoom-slider" id="zoom-slider" min="0" max="100" value="50" />
-              <button class="zoom-btn" id="zoom-in-btn" type="button" title="Zoom in">+</button>
-            </div>
-            <div class="cropper-actions">
-              <button type="button" class="btn-soft" onclick="cancelCrop()">Cancel</button>
-              <button type="button" class="btn-primary" onclick="applyCrop()">Use this crop</button>
-            </div>
+      <!-- Crop Modal -->
+      <div class="cropper-modal" id="cropper-modal" style="display:none" aria-modal="true" role="dialog">
+        <div class="cropper-modal-inner">
+          <h3 class="cropper-title">Crop your image</h3>
+          <p class="cropper-hint">Drag to pan • Zoom to fit</p>
+          <canvas id="crop-canvas"></canvas>
+          <div class="cropper-zoom-bar">
+            <label for="zoom-slider">Zoom</label>
+            <button class="zoom-btn" id="zoom-out-btn" type="button">−</button>
+            <input type="range" class="zoom-slider" id="zoom-slider" min="1" max="400" value="100" />
+            <button class="zoom-btn" id="zoom-in-btn" type="button">+</button>
+          </div>
+          <div class="cropper-actions">
+            <button type="button" class="btn-soft" id="cancel-crop-btn">Cancel</button>
+            <button type="button" class="btn-primary" id="apply-crop-btn">Confirm</button>
           </div>
         </div>
-      </section>
+      </div>
 
       <!-- Set Info -->
       <section class="form-section">
@@ -103,11 +100,11 @@
       <!-- Categories -->
       <section class="form-section">
         <h3 class="section-title">Categories</h3>
-        <p class="section-hint">Assign one or more categories to this set. Visitors can filter the gallery by category.</p>
+        <p class="section-hint">Assign one or more categories to this set so visitors can filter by them.</p>
         <div id="cats-loading" class="section-hint" style="font-style:italic; margin-top:12px">Loading categories…</div>
         <div id="cats-checkboxes" class="cats-checkboxes" style="display:none"></div>
         <div id="cats-none" style="display:none; margin-top:12px">
-          <p class="section-hint">No categories exist yet. <a href="categories.html" target="_blank" class="inline-link">Create some here</a>, then come back.</p>
+          <p class="section-hint">No categories yet. <a href="categories.html" target="_blank" class="inline-link">Create some here</a>, then come back.</p>
         </div>
       </section>
 
@@ -125,7 +122,6 @@
     <p>Admin Panel &mdash; The Salt &amp; Pepper Collection</p>
   </footer>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getFirestore, collection, doc, getDoc, getDocs, addDoc, updateDoc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -138,12 +134,12 @@
     const storage = getStorage(app);
     const auth = getAuth(app);
 
-    let cropper = null;
     let croppedBlob = null;
     let existingImageUrl = null;
     let existingImagePath = null;
     let editId = null;
 
+    // ─── Auth ────────────────────────────────────────────────────────────────
     onAuthStateChanged(auth, async (user) => {
       if (!user) { window.location.href = "login.html"; return; }
       const params = new URLSearchParams(window.location.search);
@@ -162,31 +158,7 @@
       window.location.href = "../index.html";
     });
 
-    async function loadCategories() {
-      const loadingEl = document.getElementById("cats-loading");
-      const checkboxEl = document.getElementById("cats-checkboxes");
-      const noneEl = document.getElementById("cats-none");
-      try {
-        const q = query(collection(db, "categories"), orderBy("name"));
-        const snap = await getDocs(q);
-        const cats = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        loadingEl.style.display = "none";
-        if (cats.length === 0) {
-          noneEl.style.display = "block";
-          return;
-        }
-        checkboxEl.style.display = "flex";
-        checkboxEl.innerHTML = cats.map(cat => `
-          <label class="cat-checkbox-label" for="cat-${cat.id}">
-            <input type="checkbox" id="cat-${cat.id}" value="${cat.id}" class="cat-checkbox" />
-            <span class="cat-checkbox-text">${escHtml(cat.name)}</span>
-          </label>
-        `).join("");
-      } catch (e) {
-        loadingEl.textContent = "Could not load categories.";
-      }
-    }
-
+    // ─── Load existing set for editing ───────────────────────────────────────
     async function loadExisting(id) {
       const snap = await getDoc(doc(db, "sets", id));
       if (!snap.exists()) return;
@@ -213,110 +185,284 @@
       }
     }
 
+    // ─── Categories ───────────────────────────────────────────────────────────
+    async function loadCategories() {
+      const loadingEl = document.getElementById("cats-loading");
+      const checkboxEl = document.getElementById("cats-checkboxes");
+      const noneEl = document.getElementById("cats-none");
+      try {
+        const q = query(collection(db, "categories"), orderBy("name"));
+        const snap = await getDocs(q);
+        const cats = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        loadingEl.style.display = "none";
+        if (cats.length === 0) { noneEl.style.display = "block"; return; }
+        checkboxEl.style.display = "flex";
+        checkboxEl.innerHTML = cats.map(cat => `
+          <label class="cat-checkbox-label" for="cat-${cat.id}">
+            <input type="checkbox" id="cat-${cat.id}" value="${cat.id}" class="cat-checkbox" />
+            <span class="cat-checkbox-text">${escHtml(cat.name)}</span>
+          </label>
+        `).join("");
+      } catch (e) {
+        loadingEl.textContent = "Could not load categories.";
+      }
+    }
+
+    // ─── Custom Canvas Cropper ─────────────────────────────────────────────────
+    const cropModal   = document.getElementById("cropper-modal");
+    const cropCanvas  = document.getElementById("crop-canvas");
+    const ctx         = cropCanvas.getContext("2d");
+    const zoomSlider  = document.getElementById("zoom-slider");
+
+    let sourceImage = null;   // HTMLImageElement
+    let panX = 0, panY = 0;   // offset of image centre relative to canvas centre
+    let scale = 1;            // current zoom (1 = fit the canvas)
+    let baseScale = 1;        // scale at which image fills canvas width or height
+    let isDragging = false;
+    let dragStartX = 0, dragStartY = 0;
+    let lastPanX = 0, lastPanY = 0;
+
+    // Pinch state
+    let lastPinchDist = null;
+
+    function getCanvasRect() {
+      return cropCanvas.getBoundingClientRect();
+    }
+
+    // Canvas dimensions: 4:3 aspect ratio
+    const CANVAS_W = 600;
+    const CANVAS_H = 450;
+    // Output image dimensions
+    const OUT_W = 1200;
+    const OUT_H = 900;
+
+    function initCropper(img) {
+      sourceImage = img;
+      cropCanvas.width  = CANVAS_W;
+      cropCanvas.height = CANVAS_H;
+
+      // Scale so image covers the full canvas (no gaps)
+      baseScale = Math.max(CANVAS_W / img.naturalWidth, CANVAS_H / img.naturalHeight);
+      scale = baseScale;
+      panX = 0;
+      panY = 0;
+
+      zoomSlider.min = 100;
+      zoomSlider.max = 400;
+      zoomSlider.value = 100;
+
+      drawCropper();
+    }
+
+    function drawCropper() {
+      if (!sourceImage) return;
+      ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+
+      // Draw image centred with current pan offset
+      const drawW = sourceImage.naturalWidth  * scale;
+      const drawH = sourceImage.naturalHeight * scale;
+      const x = (CANVAS_W / 2) - (drawW / 2) + panX;
+      const y = (CANVAS_H / 2) - (drawH / 2) + panY;
+
+      ctx.drawImage(sourceImage, x, y, drawW, drawH);
+
+      // Crop border
+      ctx.strokeStyle = "rgba(255,255,255,0.9)";
+      ctx.lineWidth = 3;
+      ctx.strokeRect(2, 2, CANVAS_W - 4, CANVAS_H - 4);
+
+      // Rule-of-thirds guide lines
+      ctx.strokeStyle = "rgba(255,255,255,0.2)";
+      ctx.lineWidth = 1;
+      for (let i = 1; i <= 2; i++) {
+        ctx.beginPath();
+        ctx.moveTo((CANVAS_W / 3) * i, 0);
+        ctx.lineTo((CANVAS_W / 3) * i, CANVAS_H);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, (CANVAS_H / 3) * i);
+        ctx.lineTo(CANVAS_W, (CANVAS_H / 3) * i);
+        ctx.stroke();
+      }
+    }
+
+    function clampPan() {
+      if (!sourceImage) return;
+      const drawW = sourceImage.naturalWidth  * scale;
+      const drawH = sourceImage.naturalHeight * scale;
+      // Max pan: half the overflow in each axis (so image always covers canvas)
+      const maxPanX = Math.max(0, (drawW - CANVAS_W) / 2);
+      const maxPanY = Math.max(0, (drawH - CANVAS_H) / 2);
+      panX = Math.max(-maxPanX, Math.min(maxPanX, panX));
+      panY = Math.max(-maxPanY, Math.min(maxPanY, panY));
+    }
+
+    function applyZoom(newScale) {
+      // Min scale: image must cover the full canvas
+      const minScale = Math.max(CANVAS_W / sourceImage.naturalWidth, CANVAS_H / sourceImage.naturalHeight);
+      scale = Math.max(minScale, Math.min(baseScale * 4, newScale));
+      clampPan();
+      drawCropper();
+    }
+
+    // Mouse drag
+    cropCanvas.addEventListener("mousedown", (e) => {
+      isDragging = true;
+      dragStartX = e.clientX;
+      dragStartY = e.clientY;
+      lastPanX = panX;
+      lastPanY = panY;
+    });
+
+    window.addEventListener("mousemove", (e) => {
+      if (!isDragging) return;
+      const r = getCanvasRect();
+      const ratioX = CANVAS_W / r.width;
+      const ratioY = CANVAS_H / r.height;
+      panX = lastPanX + (e.clientX - dragStartX) * ratioX;
+      panY = lastPanY + (e.clientY - dragStartY) * ratioY;
+      clampPan();
+      drawCropper();
+    });
+
+    window.addEventListener("mouseup", () => { isDragging = false; });
+
+    // Touch drag + pinch
+    cropCanvas.addEventListener("touchstart", (e) => {
+      if (e.touches.length === 1) {
+        isDragging = true;
+        dragStartX = e.touches[0].clientX;
+        dragStartY = e.touches[0].clientY;
+        lastPanX = panX;
+        lastPanY = panY;
+        lastPinchDist = null;
+      } else if (e.touches.length === 2) {
+        isDragging = false;
+        lastPinchDist = getPinchDist(e);
+      }
+      e.preventDefault();
+    }, { passive: false });
+
+    cropCanvas.addEventListener("touchmove", (e) => {
+      e.preventDefault();
+      if (e.touches.length === 1 && isDragging) {
+        const r = getCanvasRect();
+        const ratioX = CANVAS_W / r.width;
+        const ratioY = CANVAS_H / r.height;
+        panX = lastPanX + (e.touches[0].clientX - dragStartX) * ratioX;
+        panY = lastPanY + (e.touches[0].clientY - dragStartY) * ratioY;
+        clampPan();
+        drawCropper();
+      } else if (e.touches.length === 2) {
+        const dist = getPinchDist(e);
+        if (lastPinchDist) {
+          const factor = dist / lastPinchDist;
+          const newScale = scale * factor;
+          applyZoom(newScale);
+          // Keep slider in sync
+          zoomSlider.value = Math.round((scale / baseScale) * 100);
+        }
+        lastPinchDist = dist;
+      }
+    }, { passive: false });
+
+    cropCanvas.addEventListener("touchend", () => {
+      isDragging = false;
+      lastPinchDist = null;
+    });
+
+    function getPinchDist(e) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    // Mouse wheel zoom
+    cropCanvas.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      const factor = e.deltaY < 0 ? 1.08 : 0.93;
+      applyZoom(scale * factor);
+      zoomSlider.value = Math.round((scale / baseScale) * 100);
+    }, { passive: false });
+
+    // Slider zoom
+    zoomSlider.addEventListener("input", () => {
+      if (!sourceImage) return;
+      const pct = parseInt(zoomSlider.value) / 100; // 1–4
+      applyZoom(baseScale * pct);
+    });
+
+    document.getElementById("zoom-in-btn").addEventListener("click", () => {
+      zoomSlider.value = Math.min(400, parseInt(zoomSlider.value) + 20);
+      zoomSlider.dispatchEvent(new Event("input"));
+    });
+
+    document.getElementById("zoom-out-btn").addEventListener("click", () => {
+      zoomSlider.value = Math.max(100, parseInt(zoomSlider.value) - 20);
+      zoomSlider.dispatchEvent(new Event("input"));
+    });
+
+    // Open / close cropper
     document.getElementById("image-input").addEventListener("change", (e) => {
       const file = e.target.files[0];
       if (!file) return;
       const reader = new FileReader();
-      reader.onload = (ev) => openCropper(ev.target.result);
+      reader.onload = (ev) => {
+        const img = new Image();
+        img.onload = () => {
+          cropModal.style.display = "flex";
+          // Wait one frame so canvas has its CSS dimensions
+          requestAnimationFrame(() => initCropper(img));
+        };
+        img.src = ev.target.result;
+      };
       reader.readAsDataURL(file);
     });
 
-    // Track zoom level (0–1 normalized)
-    let zoomRatio = 0;
-
-    function openCropper(src) {
-      document.getElementById("cropper-modal").style.display = "flex";
-      const img = document.getElementById("crop-image");
-
-      // Destroy previous instance cleanly
-      if (cropper) { cropper.destroy(); cropper = null; }
-
-      // Reset src to force reload
-      img.src = "";
-      img.onload = null;
-
-      img.onload = () => {
-        cropper = new Cropper(img, {
-          aspectRatio: 1,
-          viewMode: 1,          // image must fill the crop box area
-          dragMode: 'move',     // drag moves the image, not the box
-          autoCropArea: 1,      // crop box fills the whole canvas by default
-          movable: true,
-          zoomable: true,
-          zoomOnWheel: true,
-          scalable: false,
-          cropBoxMovable: false,  // box is fixed; image moves under it
-          cropBoxResizable: false,
-          toggleDragModeOnDblclick: false,
-          ready() {
-            // Set initial slider position to match default zoom
-            zoomRatio = 0.5;
-            document.getElementById("zoom-slider").value = 50;
-          },
-          zoom(e) {
-            // Keep our slider in sync when scroll-wheel zooms
-            const ratio = e.detail.ratio;
-            const old = e.detail.oldRatio;
-            // Clamp to sane bounds
-            if (ratio < 0.05 || ratio > 10) { e.preventDefault(); return; }
-          }
-        });
-      };
-
-      img.src = src;
-    }
-
-    // Zoom slider
-    document.getElementById("zoom-slider").addEventListener("input", (e) => {
-      if (!cropper) return;
-      // Map 0–100 slider to a zoom multiplier 0.5x–4x
-      const val = parseInt(e.target.value);
-      const zoomTo = 0.5 + (val / 100) * 3.5;
-      cropper.zoomTo(zoomTo);
-    });
-
-    document.getElementById("zoom-in-btn").addEventListener("click", () => {
-      if (!cropper) return;
-      const slider = document.getElementById("zoom-slider");
-      slider.value = Math.min(100, parseInt(slider.value) + 10);
-      slider.dispatchEvent(new Event("input"));
-    });
-
-    document.getElementById("zoom-out-btn").addEventListener("click", () => {
-      if (!cropper) return;
-      const slider = document.getElementById("zoom-slider");
-      slider.value = Math.max(0, parseInt(slider.value) - 10);
-      slider.dispatchEvent(new Event("input"));
-    });
-
-    window.cancelCrop = function() {
-      if (cropper) { cropper.destroy(); cropper = null; }
-      document.getElementById("cropper-modal").style.display = "none";
+    document.getElementById("cancel-crop-btn").addEventListener("click", () => {
+      cropModal.style.display = "none";
       document.getElementById("image-input").value = "";
-    };
+      sourceImage = null;
+    });
 
-    window.applyCrop = function() {
-      if (!cropper) return;
-      const canvas = cropper.getCroppedCanvas({
-        width: 800,
-        height: 800,
-        imageSmoothingEnabled: true,
-        imageSmoothingQuality: "high"
-      });
-      if (!canvas) { alert("Could not crop image. Please try again."); return; }
-      canvas.toBlob((blob) => {
-        if (!blob) { alert("Could not process image. Please try a different file."); return; }
+    document.getElementById("apply-crop-btn").addEventListener("click", () => {
+      if (!sourceImage) return;
+
+      // Render final crop at OUT_W x OUT_H (4:3)
+      const out = document.createElement("canvas");
+      out.width = OUT_W;
+      out.height = OUT_H;
+      const octx = out.getContext("2d");
+
+      // Work out where the image is drawn on the preview canvas
+      const drawW = sourceImage.naturalWidth  * scale;
+      const drawH = sourceImage.naturalHeight * scale;
+      const imgX = (CANVAS_W / 2) - (drawW / 2) + panX;
+      const imgY = (CANVAS_H / 2) - (drawH / 2) + panY;
+
+      // Convert canvas-pixel coords back to source-image coords
+      // Canvas top-left (0,0) maps to source pixel (-imgX/scale, -imgY/scale)
+      const srcX = -imgX / scale;
+      const srcY = -imgY / scale;
+      const srcW =  CANVAS_W / scale;
+      const srcH =  CANVAS_H / scale;
+
+      octx.drawImage(sourceImage, srcX, srcY, srcW, srcH, 0, 0, OUT_W, OUT_H);
+
+      out.toBlob((blob) => {
+        if (!blob) { alert("Could not process image. Please try again."); return; }
         croppedBlob = blob;
         const url = URL.createObjectURL(blob);
-        const img = document.getElementById("current-image");
-        img.src = url;
-        img.style.display = "block";
+        const preview = document.getElementById("current-image");
+        preview.src = url;
+        preview.style.display = "block";
         document.getElementById("upload-placeholder").style.display = "none";
-        cropper.destroy(); cropper = null;
-        document.getElementById("cropper-modal").style.display = "none";
-      }, "image/jpeg", 0.92);
-    };
+        cropModal.style.display = "none";
+        sourceImage = null;
+      }, "image/jpeg", 0.93);
+    });
 
+    // ─── Save ─────────────────────────────────────────────────────────────────
     window.saveSet = async function() {
       const btn = document.getElementById("save-btn");
       const errEl = document.getElementById("form-error");
