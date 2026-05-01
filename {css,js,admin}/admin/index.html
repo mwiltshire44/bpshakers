@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Panel — The Salt & Pepper Collection</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/main.css" />
+</head>
+<body class="admin-page">
+
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="header-title">
+        <span class="header-eyebrow">Admin Panel</span>
+        <h1 class="site-title"><a href="../index.html" class="title-link">The Salt &amp; Pepper Shakers</a></h1>
+      </div>
+      <nav class="header-nav">
+        <a href="../index.html" class="nav-link">View Gallery</a>
+        <a href="#" class="nav-link" id="logout-btn">Sign Out</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <div class="admin-toolbar">
+      <h2 class="admin-heading">Manage Sets</h2>
+      <div class="admin-toolbar-actions">
+        <a href="categories.html" class="btn-soft">Manage Categories</a>
+        <a href="edit.html" class="btn-primary">+ Add New Set</a>
+      </div>
+    </div>
+
+    <div id="admin-loading" class="gallery-loading">
+      <div class="loading-dots"><span></span><span></span><span></span></div>
+      <p>Loading sets…</p>
+    </div>
+
+    <div class="admin-grid" id="admin-grid"></div>
+  </main>
+
+  <footer class="site-footer">
+    <p>Admin Panel &mdash; The Salt &amp; Pepper Collection</p>
+  </footer>
+
+  <!-- Delete confirmation modal -->
+  <div class="modal-overlay" id="delete-modal" style="display:none">
+    <div class="modal-card">
+      <h3 class="modal-title">Delete this set?</h3>
+      <p class="modal-body">This will permanently remove "<span id="delete-name"></span>" and its image. This cannot be undone.</p>
+      <div class="modal-actions">
+        <button class="btn-soft" onclick="closeDeleteModal()">Cancel</button>
+        <button class="btn-danger" id="confirm-delete-btn" onclick="confirmDelete()">Yes, Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, collection, getDocs, doc, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getStorage, ref, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { firebaseConfig } from "../js/firebase-config.js";
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
+    const auth = getAuth(app);
+
+    let pendingDeleteId = null;
+    let pendingDeleteImagePath = null;
+
+    onAuthStateChanged(auth, (user) => {
+      if (!user) { window.location.href = "login.html"; return; }
+      loadSets();
+    });
+
+    document.getElementById("logout-btn").addEventListener("click", async (e) => {
+      e.preventDefault();
+      await signOut(auth);
+      window.location.href = "../index.html";
+    });
+
+    async function loadSets() {
+      const q = query(collection(db, "sets"), orderBy("createdAt", "desc"));
+      const snap = await getDocs(q);
+      const sets = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      document.getElementById("admin-loading").style.display = "none";
+
+      if (sets.length === 0) {
+        document.getElementById("admin-grid").innerHTML = `
+          <div class="admin-empty">
+            <p>No sets yet. <a href="edit.html">Add your first set!</a></p>
+          </div>`;
+        return;
+      }
+
+      document.getElementById("admin-grid").innerHTML = sets.map(set => `
+        <div class="admin-card">
+          <div class="admin-card-img-wrap">
+            <img src="${esc(set.imageUrl)}" alt="${esc(set.name)}" class="admin-card-img" onerror="this.src='../img/placeholder.svg'" />
+          </div>
+          <div class="admin-card-info">
+            <strong class="admin-card-name">${esc(set.name)}</strong>
+            <span class="admin-card-meta">${[set.year, set.country].filter(Boolean).join(" · ") || "—"}</span>
+          </div>
+          <div class="admin-card-actions">
+            <a href="../set.html?id=${esc(set.id)}" class="btn-sm btn-view" target="_blank">View</a>
+            <a href="edit.html?id=${esc(set.id)}" class="btn-sm btn-edit-sm">Edit</a>
+            <button class="btn-sm btn-del" onclick="openDeleteModal('${esc(set.id)}','${esc(set.imagePath || "")}','${esc(set.name)}')">Delete</button>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function esc(s) { return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
+
+    window.openDeleteModal = function(id, imagePath, name) {
+      pendingDeleteId = id;
+      pendingDeleteImagePath = imagePath;
+      document.getElementById("delete-name").textContent = name;
+      document.getElementById("delete-modal").style.display = "flex";
+    };
+
+    window.closeDeleteModal = function() {
+      document.getElementById("delete-modal").style.display = "none";
+      pendingDeleteId = null;
+      pendingDeleteImagePath = null;
+    };
+
+    window.confirmDelete = async function() {
+      if (!pendingDeleteId) return;
+      const btn = document.getElementById("confirm-delete-btn");
+      btn.textContent = "Deleting…";
+      btn.disabled = true;
+      try {
+        // Delete image from storage
+        if (pendingDeleteImagePath) {
+          try {
+            await deleteObject(ref(storage, pendingDeleteImagePath));
+          } catch (e) { console.warn("Image delete failed (may already be gone):", e); }
+        }
+        await deleteDoc(doc(db, "sets", pendingDeleteId));
+        closeDeleteModal();
+        loadSets();
+      } catch (e) {
+        alert("Error deleting set: " + e.message);
+        btn.textContent = "Yes, Delete";
+        btn.disabled = false;
+      }
+    };
+  </script>
+</body>
+</html>
