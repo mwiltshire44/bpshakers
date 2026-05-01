@@ -61,13 +61,14 @@
     <!-- Results count -->
     <div class="results-info" id="results-info"></div>
 
-    <!-- Gallery Grid -->
-    <div class="gallery-grid" id="gallery-grid">
-      <div class="gallery-loading" id="gallery-loading">
-        <div class="loading-dots"><span></span><span></span><span></span></div>
-        <p>Loading the collection…</p>
-      </div>
+    <!-- Loading spinner (outside grid so grid.innerHTML doesn't destroy it) -->
+    <div class="gallery-loading" id="gallery-loading">
+      <div class="loading-dots"><span></span><span></span><span></span></div>
+      <p>Loading the collection…</p>
     </div>
+
+    <!-- Gallery Grid -->
+    <div class="gallery-grid" id="gallery-grid"></div>
 
     <div class="gallery-empty" id="gallery-empty" style="display:none">
       <p id="empty-message">No shakers found.</p>
@@ -162,7 +163,7 @@
       const empty = document.getElementById("gallery-empty");
       const info = document.getElementById("results-info");
 
-      loading.style.display = "none";
+      if (loading) loading.style.display = "none";
 
       if (sets.length === 0) {
         grid.innerHTML = "";
