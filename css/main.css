@@ -857,6 +857,7 @@ a { color: inherit; text-decoration: none; }
 
 .file-input { display: none; }
 
+
 /* --- Cropper Modal --- */
 .cropper-modal {
   position: fixed;
@@ -1025,7 +1026,7 @@ a { color: inherit; text-decoration: none; }
   align-items: center;
   gap: 10px;
   margin-bottom: 20px;
-  flex-wrap: wrap;
+  overflow: hidden;
 }
 
 .cat-filter-label {
@@ -1036,10 +1037,20 @@ a { color: inherit; text-decoration: none; }
   flex-shrink: 0;
 }
 
+.cat-filter-pills-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex: 1;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.cat-filter-pills-scroll::-webkit-scrollbar { display: none; }
+
 .cat-filter-pills {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 8px;
+  padding-bottom: 2px;
 }
 
 .cat-filter-btn {
@@ -1241,6 +1252,7 @@ a { color: inherit; text-decoration: none; }
   /* Category filter */
   .category-filter-bar { gap: 8px; }
   .cat-filter-pills { gap: 6px; }
+  .cat-filter-pills-scroll { flex: 1; }
   .cat-filter-btn { padding: 5px 13px; font-size: 0.78rem; }
 
   /* Gallery grid: 2 columns on mobile */

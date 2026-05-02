@@ -43,6 +43,10 @@
         <h2 class="set-name" id="set-name"></h2>
 
         <dl class="set-meta">
+          <div class="meta-row" id="row-setno">
+            <dt>Set No.</dt>
+            <dd id="meta-setno"></dd>
+          </div>
           <div class="meta-row" id="row-year">
             <dt>Year Obtained</dt>
             <dd id="meta-year"></dd>
@@ -143,6 +147,8 @@
         }
 
         // Year
+        setText("meta-setno", set.setNo != null ? "#" + set.setNo : "");
+        showRow("row-setno", set.setNo != null);
         setText("meta-year", set.year || "");
         showRow("row-year", set.year);
 

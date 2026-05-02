@@ -40,8 +40,8 @@
         <label class="sort-label" for="sort-select">Sort by</label>
         <select id="sort-select" class="sort-select">
           <option value="recently-added">Recently added</option>
-          <option value="newest">Newest first</option>
-          <option value="oldest">Oldest first</option>
+          <option value="newest">Newest first (year → set no.)</option>
+          <option value="oldest">Oldest first (year → set no.)</option>
           <option value="az">Name A → Z</option>
           <option value="za">Name Z → A</option>
           <option value="country-az">Country A → Z</option>
@@ -53,8 +53,10 @@
     <!-- Category Filter Bar (shown once categories load) -->
     <div class="category-filter-bar" id="category-filter-bar" style="display:none">
       <span class="cat-filter-label">Category</span>
-      <div class="cat-filter-pills" id="cat-filter-pills">
-        <button class="cat-filter-btn active" data-cat="" onclick="selectCategory(this, '')">All</button>
+      <div class="cat-filter-pills-scroll">
+        <div class="cat-filter-pills" id="cat-filter-pills">
+          <button class="cat-filter-btn active" data-cat="" onclick="selectCategory(this, '')">All</button>
+        </div>
       </div>
     </div>
 
@@ -205,7 +207,7 @@
             />
             <div class="card-overlay">
               <span class="card-name">${esc(set.name)}</span>
-              ${set.country ? `<span class="card-country">${esc(set.country)}</span>` : ""}
+              <span class="card-country">${set.setNo != null ? `#${set.setNo}` : ""}${set.setNo != null && set.country ? " · " : ""}${esc(set.country || "")}</span>
             </div>
           </div>
         </a>
@@ -235,8 +237,30 @@
     function sortSets(sets, sort) {
       return [...sets].sort((a, b) => {
         switch (sort) {
-          case "newest":      return (b.year || 0) - (a.year || 0);
-          case "oldest":      return (a.year || 0) - (b.year || 0);
+          case "newest": {
+            const aHasYear = a.year != null && a.year !== 0;
+            const bHasYear = b.year != null && b.year !== 0;
+            // No-year sets always go to the end
+            if (aHasYear && !bHasYear) return -1;
+            if (!aHasYear && bHasYear) return 1;
+            // Both have no year — sort by setNo desc
+            if (!aHasYear && !bHasYear) return (b.setNo || 0) - (a.setNo || 0);
+            // Both have year — sort year desc, then setNo desc
+            if (b.year !== a.year) return b.year - a.year;
+            return (b.setNo || 0) - (a.setNo || 0);
+          }
+          case "oldest": {
+            const aHasYear = a.year != null && a.year !== 0;
+            const bHasYear = b.year != null && b.year !== 0;
+            // No-year sets always go to the end
+            if (aHasYear && !bHasYear) return -1;
+            if (!aHasYear && bHasYear) return 1;
+            // Both have no year — sort by setNo asc
+            if (!aHasYear && !bHasYear) return (a.setNo || 0) - (b.setNo || 0);
+            // Both have year — sort year asc, then setNo asc
+            if (a.year !== b.year) return a.year - b.year;
+            return (a.setNo || 0) - (b.setNo || 0);
+          }
           case "az":          return (a.name || "").localeCompare(b.name || "");
           case "za":          return (b.name || "").localeCompare(a.name || "");
           case "country-az":  return (a.country || "").localeCompare(b.country || "");
