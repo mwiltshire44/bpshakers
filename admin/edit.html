@@ -83,15 +83,271 @@
             <input type="text" id="f-gifted" class="form-input" placeholder="e.g. Aunt Margaret" />
           </div>
           <div class="form-group">
-            <label class="form-label" for="f-country">Country <span class="required">*</span></label>
-            <input type="text" id="f-country" class="form-input" placeholder="e.g. Mexico" />
+            <label class="form-label" for="f-country">Country</label>
+            <select id="f-country" class="form-input">
+              <option value="" disabled selected>— Select a country —</option>
+              <option value="Canada">Canada</option>
+              <option value="Unknown">Unknown</option>
+              <option disabled>──────────────</option>
+              <option value="AF">Afghanistan</option>
+              <option value="AX">Åland Islands</option>
+              <option value="AL">Albania</option>
+              <option value="DZ">Algeria</option>
+              <option value="AS">American Samoa</option>
+              <option value="AD">Andorra</option>
+              <option value="AO">Angola</option>
+              <option value="AI">Anguilla</option>
+              <option value="AQ">Antarctica</option>
+              <option value="AG">Antigua and Barbuda</option>
+              <option value="AR">Argentina</option>
+              <option value="AM">Armenia</option>
+              <option value="AW">Aruba</option>
+              <option value="AU">Australia</option>
+              <option value="AT">Austria</option>
+              <option value="AZ">Azerbaijan</option>
+              <option value="BS">Bahamas</option>
+              <option value="BH">Bahrain</option>
+              <option value="BD">Bangladesh</option>
+              <option value="BB">Barbados</option>
+              <option value="BY">Belarus</option>
+              <option value="BE">Belgium</option>
+              <option value="BZ">Belize</option>
+              <option value="BJ">Benin</option>
+              <option value="BM">Bermuda</option>
+              <option value="BT">Bhutan</option>
+              <option value="BO">Bolivia (Plurinational State of)</option>
+              <option value="BA">Bosnia and Herzegovina</option>
+              <option value="BW">Botswana</option>
+              <option value="BV">Bouvet Island</option>
+              <option value="BR">Brazil</option>
+              <option value="IO">British Indian Ocean Territory</option>
+              <option value="BN">Brunei Darussalam</option>
+              <option value="BG">Bulgaria</option>
+              <option value="BF">Burkina Faso</option>
+              <option value="BI">Burundi</option>
+              <option value="CV">Cabo Verde</option>
+              <option value="KH">Cambodia</option>
+              <option value="CM">Cameroon</option>
+              <option value="BQ">Caribbean Netherlands</option>
+              <option value="KY">Cayman Islands</option>
+              <option value="CF">Central African Republic</option>
+              <option value="TD">Chad</option>
+              <option value="CL">Chile</option>
+              <option value="CN">China</option>
+              <option value="CX">Christmas Island</option>
+              <option value="CC">Cocos (Keeling) Islands</option>
+              <option value="CO">Colombia</option>
+              <option value="KM">Comoros</option>
+              <option value="CG">Congo</option>
+              <option value="CD">Congo, Democratic Republic of the</option>
+              <option value="CK">Cook Islands</option>
+              <option value="CR">Costa Rica</option>
+              <option value="HR">Croatia</option>
+              <option value="CU">Cuba</option>
+              <option value="CW">Curaçao</option>
+              <option value="CY">Cyprus</option>
+              <option value="CZ">Czech Republic</option>
+              <option value="CI">Côte d'Ivoire</option>
+              <option value="DK">Denmark</option>
+              <option value="DJ">Djibouti</option>
+              <option value="DM">Dominica</option>
+              <option value="DO">Dominican Republic</option>
+              <option value="EC">Ecuador</option>
+              <option value="EG">Egypt</option>
+              <option value="SV">El Salvador</option>
+              <option value="GQ">Equatorial Guinea</option>
+              <option value="ER">Eritrea</option>
+              <option value="EE">Estonia</option>
+              <option value="SZ">Eswatini (Swaziland)</option>
+              <option value="ET">Ethiopia</option>
+              <option value="FK">Falkland Islands (Malvinas)</option>
+              <option value="FO">Faroe Islands</option>
+              <option value="FJ">Fiji</option>
+              <option value="FI">Finland</option>
+              <option value="FR">France</option>
+              <option value="GF">French Guiana</option>
+              <option value="PF">French Polynesia</option>
+              <option value="TF">French Southern Territories</option>
+              <option value="GA">Gabon</option>
+              <option value="GM">Gambia</option>
+              <option value="GE">Georgia</option>
+              <option value="DE">Germany</option>
+              <option value="GH">Ghana</option>
+              <option value="GI">Gibraltar</option>
+              <option value="GR">Greece</option>
+              <option value="GL">Greenland</option>
+              <option value="GD">Grenada</option>
+              <option value="GP">Guadeloupe</option>
+              <option value="GU">Guam</option>
+              <option value="GT">Guatemala</option>
+              <option value="GG">Guernsey</option>
+              <option value="GN">Guinea</option>
+              <option value="GW">Guinea-Bissau</option>
+              <option value="GY">Guyana</option>
+              <option value="HT">Haiti</option>
+              <option value="HM">Heard Island and Mcdonald Islands</option>
+              <option value="HN">Honduras</option>
+              <option value="HK">Hong Kong</option>
+              <option value="HU">Hungary</option>
+              <option value="IS">Iceland</option>
+              <option value="IN">India</option>
+              <option value="ID">Indonesia</option>
+              <option value="IR">Iran</option>
+              <option value="IQ">Iraq</option>
+              <option value="IE">Ireland</option>
+              <option value="IM">Isle of Man</option>
+              <option value="IL">Israel</option>
+              <option value="IT">Italy</option>
+              <option value="JM">Jamaica</option>
+              <option value="JP">Japan</option>
+              <option value="JE">Jersey</option>
+              <option value="JO">Jordan</option>
+              <option value="KZ">Kazakhstan</option>
+              <option value="KE">Kenya</option>
+              <option value="KI">Kiribati</option>
+              <option value="KP">Korea, North</option>
+              <option value="KR">Korea, South</option>
+              <option value="XK">Kosovo</option>
+              <option value="KW">Kuwait</option>
+              <option value="KG">Kyrgyzstan</option>
+              <option value="LA">Lao People's Democratic Republic</option>
+              <option value="LV">Latvia</option>
+              <option value="LB">Lebanon</option>
+              <option value="LS">Lesotho</option>
+              <option value="LR">Liberia</option>
+              <option value="LY">Libya</option>
+              <option value="LI">Liechtenstein</option>
+              <option value="LT">Lithuania</option>
+              <option value="LU">Luxembourg</option>
+              <option value="MO">Macao</option>
+              <option value="MK">Macedonia North</option>
+              <option value="MG">Madagascar</option>
+              <option value="MW">Malawi</option>
+              <option value="MY">Malaysia</option>
+              <option value="MV">Maldives</option>
+              <option value="ML">Mali</option>
+              <option value="MT">Malta</option>
+              <option value="MH">Marshall Islands</option>
+              <option value="MQ">Martinique</option>
+              <option value="MR">Mauritania</option>
+              <option value="MU">Mauritius</option>
+              <option value="YT">Mayotte</option>
+              <option value="MX">Mexico</option>
+              <option value="FM">Micronesia</option>
+              <option value="MD">Moldova</option>
+              <option value="MC">Monaco</option>
+              <option value="MN">Mongolia</option>
+              <option value="ME">Montenegro</option>
+              <option value="MS">Montserrat</option>
+              <option value="MA">Morocco</option>
+              <option value="MZ">Mozambique</option>
+              <option value="MM">Myanmar (Burma)</option>
+              <option value="NA">Namibia</option>
+              <option value="NR">Nauru</option>
+              <option value="NP">Nepal</option>
+              <option value="NL">Netherlands</option>
+              <option value="AN">Netherlands Antilles</option>
+              <option value="NC">New Caledonia</option>
+              <option value="NZ">New Zealand</option>
+              <option value="NI">Nicaragua</option>
+              <option value="NE">Niger</option>
+              <option value="NG">Nigeria</option>
+              <option value="NU">Niue</option>
+              <option value="NF">Norfolk Island</option>
+              <option value="MP">Northern Mariana Islands</option>
+              <option value="NO">Norway</option>
+              <option value="OM">Oman</option>
+              <option value="PK">Pakistan</option>
+              <option value="PW">Palau</option>
+              <option value="PS">Palestine</option>
+              <option value="PA">Panama</option>
+              <option value="PG">Papua New Guinea</option>
+              <option value="PY">Paraguay</option>
+              <option value="PE">Peru</option>
+              <option value="PH">Philippines</option>
+              <option value="PN">Pitcairn Islands</option>
+              <option value="PL">Poland</option>
+              <option value="PT">Portugal</option>
+              <option value="PR">Puerto Rico</option>
+              <option value="QA">Qatar</option>
+              <option value="RE">Reunion</option>
+              <option value="RO">Romania</option>
+              <option value="RU">Russian Federation</option>
+              <option value="RW">Rwanda</option>
+              <option value="BL">Saint Barthelemy</option>
+              <option value="SH">Saint Helena</option>
+              <option value="KN">Saint Kitts and Nevis</option>
+              <option value="LC">Saint Lucia</option>
+              <option value="MF">Saint Martin</option>
+              <option value="PM">Saint Pierre and Miquelon</option>
+              <option value="VC">Saint Vincent and the Grenadines</option>
+              <option value="WS">Samoa</option>
+              <option value="SM">San Marino</option>
+              <option value="ST">Sao Tome and Principe</option>
+              <option value="SA">Saudi Arabia</option>
+              <option value="SN">Senegal</option>
+              <option value="RS">Serbia</option>
+              <option value="CS">Serbia and Montenegro</option>
+              <option value="SC">Seychelles</option>
+              <option value="SL">Sierra Leone</option>
+              <option value="SG">Singapore</option>
+              <option value="SX">Sint Maarten</option>
+              <option value="SK">Slovakia</option>
+              <option value="SI">Slovenia</option>
+              <option value="SB">Solomon Islands</option>
+              <option value="SO">Somalia</option>
+              <option value="ZA">South Africa</option>
+              <option value="GS">South Georgia and the South Sandwich Islands</option>
+              <option value="SS">South Sudan</option>
+              <option value="ES">Spain</option>
+              <option value="LK">Sri Lanka</option>
+              <option value="SD">Sudan</option>
+              <option value="SR">Suriname</option>
+              <option value="SJ">Svalbard and Jan Mayen</option>
+              <option value="SE">Sweden</option>
+              <option value="CH">Switzerland</option>
+              <option value="SY">Syria</option>
+              <option value="TW">Taiwan</option>
+              <option value="TJ">Tajikistan</option>
+              <option value="TZ">Tanzania</option>
+              <option value="TH">Thailand</option>
+              <option value="TL">Timor-Leste</option>
+              <option value="TG">Togo</option>
+              <option value="TK">Tokelau</option>
+              <option value="TO">Tonga</option>
+              <option value="TT">Trinidad and Tobago</option>
+              <option value="TN">Tunisia</option>
+              <option value="TR">Turkey (Türkiye)</option>
+              <option value="TM">Turkmenistan</option>
+              <option value="TC">Turks and Caicos Islands</option>
+              <option value="TV">Tuvalu</option>
+              <option value="UM">U.S. Outlying Islands</option>
+              <option value="UG">Uganda</option>
+              <option value="UA">Ukraine</option>
+              <option value="AE">United Arab Emirates</option>
+              <option value="GB">United Kingdom</option>
+              <option value="US">United States</option>
+              <option value="UY">Uruguay</option>
+              <option value="UZ">Uzbekistan</option>
+              <option value="VU">Vanuatu</option>
+              <option value="VA">Vatican City Holy See</option>
+              <option value="VE">Venezuela</option>
+              <option value="VN">Vietnam</option>
+              <option value="VG">Virgin Islands, British</option>
+              <option value="VI">Virgin Islands, U.S</option>
+              <option value="WF">Wallis and Futuna</option>
+              <option value="EH">Western Sahara</option>
+              <option value="YE">Yemen</option>
+              <option value="ZM">Zambia</option>
+              <option value="ZW">Zimbabwe</option>
+            </select>
           </div>
           <div class="form-group">
-            <label class="form-label" for="f-city">City <span class="form-optional">(optional)</span></label>
+            <label class="form-label" for="f-city">City</label>
             <input type="text" id="f-city" class="form-input" placeholder="e.g. Oaxaca" />
           </div>
           <div class="form-group full-width">
-            <label class="form-label" for="f-desc">Description <span class="form-optional">(optional)</span></label>
+            <label class="form-label" for="f-desc">Description</label>
             <textarea id="f-desc" class="form-input form-textarea" placeholder="Any notes, history, or details about this set…" rows="4"></textarea>
           </div>
         </div>
@@ -241,38 +497,53 @@
       cropCanvas.width  = CANVAS_W;
       cropCanvas.height = CANVAS_H;
 
-      // Scale so image covers the full canvas (no gaps)
+      // coverScale: image fills entire canvas (no bars) — zoom ceiling
       baseScale = Math.max(CANVAS_W / img.naturalWidth, CANVAS_H / img.naturalHeight);
-      scale = baseScale;
+      // fitScale: image fits inside canvas touching long-side edges — zoom floor
+      const fitScale = Math.min(CANVAS_W / img.naturalWidth, CANVAS_H / img.naturalHeight);
+      scale = fitScale;
       panX = 0;
       panY = 0;
 
-      zoomSlider.min = 100;
-      zoomSlider.max = 400;
-      zoomSlider.value = 100;
+      // Slider range directly maps to real scale values (×1000 for integer steps)
+      // min = fitScale, max = coverScale * 4
+      zoomSlider.min = Math.round(fitScale * 1000);
+      zoomSlider.max = Math.round(baseScale * 4 * 1000);
+      zoomSlider.value = Math.round(fitScale * 1000);
 
       drawCropper();
     }
 
     function drawCropper() {
       if (!sourceImage) return;
-      ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
 
-      // Draw image centred with current pan offset
       const drawW = sourceImage.naturalWidth  * scale;
       const drawH = sourceImage.naturalHeight * scale;
       const x = (CANVAS_W / 2) - (drawW / 2) + panX;
       const y = (CANVAS_H / 2) - (drawH / 2) + panY;
 
+      // Background: white fill for any exposed area outside the image
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+      // Draw image
       ctx.drawImage(sourceImage, x, y, drawW, drawH);
 
+      // Darken exposed padding areas so user can see the crop boundary clearly
+      // (only draw overlay where image doesn't cover)
+      ctx.save();
+      ctx.globalCompositeOperation = "destination-over";
+      ctx.fillStyle = "#e8dcc8"; // warm parchment tone matches the site
+      ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+      ctx.restore();
+
       // Crop border
-      ctx.strokeStyle = "rgba(255,255,255,0.9)";
+      ctx.strokeStyle = "rgba(80,40,10,0.5)";
       ctx.lineWidth = 3;
       ctx.strokeRect(2, 2, CANVAS_W - 4, CANVAS_H - 4);
 
       // Rule-of-thirds guide lines
-      ctx.strokeStyle = "rgba(255,255,255,0.2)";
+      ctx.strokeStyle = "rgba(80,40,10,0.15)";
       ctx.lineWidth = 1;
       for (let i = 1; i <= 2; i++) {
         ctx.beginPath();
@@ -290,17 +561,30 @@
       if (!sourceImage) return;
       const drawW = sourceImage.naturalWidth  * scale;
       const drawH = sourceImage.naturalHeight * scale;
-      // Max pan: half the overflow in each axis (so image always covers canvas)
-      const maxPanX = Math.max(0, (drawW - CANVAS_W) / 2);
-      const maxPanY = Math.max(0, (drawH - CANVAS_H) / 2);
-      panX = Math.max(-maxPanX, Math.min(maxPanX, panX));
-      panY = Math.max(-maxPanY, Math.min(maxPanY, panY));
+
+      // On axes where image >= canvas: clamp so image edge never crosses canvas edge
+      // On axes where image < canvas (bar axis): force pan to 0 (stays centred)
+      if (drawW >= CANVAS_W) {
+        const maxPanX = (drawW - CANVAS_W) / 2;
+        panX = Math.max(-maxPanX, Math.min(maxPanX, panX));
+      } else {
+        panX = 0; // image narrower than canvas — centre it, no dragging
+      }
+
+      if (drawH >= CANVAS_H) {
+        const maxPanY = (drawH - CANVAS_H) / 2;
+        panY = Math.max(-maxPanY, Math.min(maxPanY, panY));
+      } else {
+        panY = 0; // image shorter than canvas — centre it, no dragging
+      }
     }
 
     function applyZoom(newScale) {
-      // Min scale: image must cover the full canvas
-      const minScale = Math.max(CANVAS_W / sourceImage.naturalWidth, CANVAS_H / sourceImage.naturalHeight);
-      scale = Math.max(minScale, Math.min(baseScale * 4, newScale));
+      const minScale = Math.min(CANVAS_W / sourceImage.naturalWidth, CANVAS_H / sourceImage.naturalHeight);
+      const maxScale = baseScale * 4;
+      scale = Math.max(minScale, Math.min(maxScale, newScale));
+      // Sync slider to actual scale (clamped)
+      zoomSlider.value = Math.round(scale * 1000);
       clampPan();
       drawCropper();
     }
@@ -358,9 +642,7 @@
         if (lastPinchDist) {
           const factor = dist / lastPinchDist;
           const newScale = scale * factor;
-          applyZoom(newScale);
-          // Keep slider in sync
-          zoomSlider.value = Math.round((scale / baseScale) * 100);
+          applyZoom(newScale); // applyZoom now syncs slider itself
         }
         lastPinchDist = dist;
       }
@@ -381,24 +663,26 @@
     cropCanvas.addEventListener("wheel", (e) => {
       e.preventDefault();
       const factor = e.deltaY < 0 ? 1.08 : 0.93;
-      applyZoom(scale * factor);
-      zoomSlider.value = Math.round((scale / baseScale) * 100);
+      applyZoom(scale * factor); // applyZoom now syncs slider itself
     }, { passive: false });
 
     // Slider zoom
     zoomSlider.addEventListener("input", () => {
       if (!sourceImage) return;
-      const pct = parseInt(zoomSlider.value) / 100; // 1–4
-      applyZoom(baseScale * pct);
+      const newScale = parseInt(zoomSlider.value) / 1000;
+      applyZoom(newScale);
     });
 
     document.getElementById("zoom-in-btn").addEventListener("click", () => {
-      zoomSlider.value = Math.min(400, parseInt(zoomSlider.value) + 20);
+      // Step = ~1% of typical scale range; feels like a small nudge
+      const stepIn = Math.round((baseScale * 4 - parseFloat(zoomSlider.min)) / 80);
+      zoomSlider.value = Math.min(parseInt(zoomSlider.max), parseInt(zoomSlider.value) + stepIn);
       zoomSlider.dispatchEvent(new Event("input"));
     });
 
     document.getElementById("zoom-out-btn").addEventListener("click", () => {
-      zoomSlider.value = Math.max(100, parseInt(zoomSlider.value) - 20);
+      const stepOut = Math.round((baseScale * 4 - parseFloat(zoomSlider.min)) / 80);
+      zoomSlider.value = Math.max(parseInt(zoomSlider.min), parseInt(zoomSlider.value) - stepOut);
       zoomSlider.dispatchEvent(new Event("input"));
     });
 
@@ -447,6 +731,10 @@
       const srcW =  CANVAS_W / scale;
       const srcH =  CANVAS_H / scale;
 
+      // Fill background first (parchment tone for any exposed areas)
+      octx.fillStyle = "#e8dcc8";
+      octx.fillRect(0, 0, OUT_W, OUT_H);
+      // Clip srcX/srcY to valid image bounds, offset destination accordingly
       octx.drawImage(sourceImage, srcX, srcY, srcW, srcH, 0, 0, OUT_W, OUT_H);
 
       out.toBlob((blob) => {
@@ -473,8 +761,7 @@
       const name = document.getElementById("f-name").value.trim();
       const country = document.getElementById("f-country").value.trim();
       if (!name) { showError("Please enter a name for this set."); return; }
-      if (!country) { showError("Please enter a country of origin."); return; }
-      if (!croppedBlob && !existingImageUrl) { showError("Please upload and crop an image."); return; }
+      if (!croppedBlob && !existingImageUrl) { showError("Please upload an image."); return; }
 
       const selectedCategories = Array.from(
         document.querySelectorAll(".cat-checkbox:checked")

@@ -212,7 +212,7 @@
       `).join("");
     }
 
-    function normalise(s) { return (s || "").toLowerCase().replace(/[^a-z0-9 ]/g, " "); }
+    function normalise(s) { return String(s == null ? "" : s).toLowerCase().replace(/[^a-z0-9 ]/g, " "); }
 
     function filterAndSort() {
       const q = normalise(document.getElementById("search-input").value);
@@ -260,7 +260,7 @@
     // Keep old clearSearch working too
     window.clearSearch = window.clearFilters;
 
-    // Debounced search — waits 1.5s after last keystroke before filtering
+    // Debounced search — waits 0.75s after last keystroke before filtering
     let searchDebounceTimer = null;
     document.getElementById("search-input").addEventListener("input", (e) => {
       document.getElementById("search-clear").style.display = e.target.value ? "block" : "none";
@@ -269,7 +269,7 @@
       if (!e.target.value) {
         filterAndSort();
       } else {
-        searchDebounceTimer = setTimeout(() => filterAndSort(), 1500);
+        searchDebounceTimer = setTimeout(() => filterAndSort(), 750);
       }
     });
     document.getElementById("search-clear").addEventListener("click", () => window.clearFilters());
