@@ -40,12 +40,12 @@
         <label class="sort-label" for="sort-select">Sort by</label>
         <select id="sort-select" class="sort-select">
           <option value="recently-added">Recently added</option>
-          <option value="newest">Newest first (year → set no.)</option>
-          <option value="oldest">Oldest first (year → set no.)</option>
+          <option value="newest">Newest first</option>
+          <option value="oldest">Oldest first</option>
           <option value="az">Name A → Z</option>
           <option value="za">Name Z → A</option>
-          <option value="country-az">Country A → Z</option>
-          <option value="country-za">Country Z → A</option>
+          <option value="country-az">By Country A → Z</option>
+          <option value="country-za">By Country Z → A</option>
         </select>
       </div>
     </div>
@@ -69,8 +69,11 @@
       <p>Loading the collection…</p>
     </div>
 
-    <!-- Gallery Grid -->
+    <!-- Flat gallery grid (default) -->
     <div class="gallery-grid" id="gallery-grid"></div>
+
+    <!-- Country-grouped view (country sorts only) -->
+    <div id="country-groups" style="display:none"></div>
 
     <div class="gallery-empty" id="gallery-empty" style="display:none">
       <p id="empty-message">No shakers found.</p>
@@ -159,16 +162,107 @@
       return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
     }
 
+    // ── Country color map ──────────────────────────────────────────────────
+    // Each entry: [borderColor, bgColor, textColor]
+    const COUNTRY_COLORS = {
+      "Canada":         ["#c41e3a", "#f9f4ec", "#8b0000"],
+      "USA":            ["#3c3b6e", "#f9f4ec", "#1a1940"],
+      "United States":  ["#3c3b6e", "#f9f4ec", "#1a1940"],
+      "Unknown":        ["#b85c38", "#f9f4ec", "#7a3e28"],
+      "Japan":          ["#bc002d", "#f9f4ec", "#7a0020"],
+      "Germany":        ["#2b2b2b", "#f9f4ec", "#1a1a1a"],
+      "France":         ["#0055a4", "#f9f4ec", "#003380"],
+      "Italy":          ["#009246", "#f9f4ec", "#006630"],
+      "Spain":          ["#c60b1e", "#f9f4ec", "#8a0015"],
+      "Mexico":         ["#006847", "#f9f4ec", "#004d35"],
+      "United Kingdom": ["#012169", "#f9f4ec", "#010f40"],
+      "Ireland":        ["#169b62", "#f9f4ec", "#0d6b44"],
+      "Portugal":       ["#006600", "#f9f4ec", "#004400"],
+      "Netherlands":    ["#ae1c28", "#f9f4ec", "#7a1220"],
+      "Belgium":        ["#2d2926", "#f9f4ec", "#1a1917"],
+      "Sweden":         ["#006aa7", "#f9f4ec", "#004d80"],
+      "Norway":         ["#ef2b2d", "#f9f4ec", "#a81f20"],
+      "Denmark":        ["#c60c30", "#f9f4ec", "#8a0922"],
+      "Finland":        ["#003580", "#f9f4ec", "#002060"],
+      "Switzerland":    ["#ff0000", "#f9f4ec", "#cc0000"],
+      "Austria":        ["#ed2939", "#f9f4ec", "#b01d2a"],
+      "Poland":         ["#dc143c", "#f9f4ec", "#9a0e2a"],
+      "Czech Republic": ["#d7141a", "#f9f4ec", "#960e12"],
+      "Hungary":        ["#477050", "#f9f4ec", "#2d4d33"],
+      "Romania":        ["#002b7f", "#f9f4ec", "#001a4d"],
+      "Greece":         ["#0d5eaf", "#f9f4ec", "#083d80"],
+      "China":          ["#de2910", "#f9f4ec", "#9e1c0b"],
+      "India":          ["#ff9933", "#f9f4ec", "#cc7a00"],
+      "Australia":      ["#00008b", "#f9f4ec", "#000066"],
+      "New Zealand":    ["#00247d", "#f9f4ec", "#001a5e"],
+      "Brazil":         ["#009c3b", "#f9f4ec", "#006d29"],
+      "Argentina":      ["#74acdf", "#f9f4ec", "#3d7eb8"],
+      "Peru":           ["#d91023", "#f9f4ec", "#9a0b19"],
+      "Colombia":       ["#fcd116", "#f9f4ec", "#b09000"],
+      "South Africa":   ["#007a4d", "#f9f4ec", "#005535"],
+      "Kenya":          ["#006600", "#f9f4ec", "#004400"],
+      "Nigeria":        ["#008751", "#f9f4ec", "#005c37"],
+      "Egypt":          ["#c09300", "#f9f4ec", "#8a6a00"],
+      "Morocco":        ["#c1272d", "#f9f4ec", "#891d21"],
+      "Taiwan":         ["#fe0000", "#f9f4ec", "#cc0000"],
+      "South Korea":    ["#003478", "#f9f4ec", "#002050"],
+      "Thailand":       ["#a51931", "#f9f4ec", "#731222"],
+      "Vietnam":        ["#da251d", "#f9f4ec", "#9a1a14"],
+      "Philippines":    ["#0038a8", "#f9f4ec", "#002880"],
+      "Indonesia":      ["#ce1126", "#f9f4ec", "#920c1b"],
+      "Malaysia":       ["#cc0001", "#f9f4ec", "#8a0001"],
+      "Singapore":      ["#ef3340", "#f9f4ec", "#b0232e"],
+      "Russia":         ["#003580", "#f9f4ec", "#002060"],
+      "Ukraine":        ["#005bbb", "#f9f4ec", "#003d80"],
+      "Turkey":         ["#e30a17", "#f9f4ec", "#a00711"],
+      "Israel":         ["#0038b8", "#f9f4ec", "#002880"],
+      "Saudi Arabia":   ["#006c35", "#f9f4ec", "#004a24"],
+      "Cuba":           ["#002a8f", "#f9f4ec", "#001a60"],
+      "Jamaica":        ["#2d7a2d", "#f9f4ec", "#1a5a1a"],
+    };
+
+    const DEFAULT_COLORS = ["#7a4f2e", "#f7f0e8", "#4a2e10"]; // warm wood fallback
+
+    function getCountryColors(country) {
+      if (!country || country.trim() === "") return COUNTRY_COLORS["Unknown"] || DEFAULT_COLORS;
+      return COUNTRY_COLORS[country] || DEFAULT_COLORS;
+    }
+
+    function renderCardHTML(set, i) {
+      return `
+        <a href="set.html?id=${esc(set.id)}" class="gallery-card" style="animation-delay:${i * 40}ms">
+          <div class="card-image-wrap">
+            <img
+              src="${esc(set.imageUrl || "")}"
+              alt="${esc(set.name)}"
+              class="card-image"
+              loading="lazy"
+              onerror="this.src='img/placeholder.svg'"
+            />
+            <div class="card-overlay">
+              <span class="card-name">${esc(set.name)}</span>
+              <span class="card-country">${set.setNo != null ? `#${set.setNo}` : ""}${set.setNo != null && set.country ? " · " : ""}${esc(set.country || "")}</span>
+            </div>
+          </div>
+        </a>`;
+    }
+
     function renderGallery(sets) {
-      const grid = document.getElementById("gallery-grid");
-      const loading = document.getElementById("gallery-loading");
-      const empty = document.getElementById("gallery-empty");
-      const info = document.getElementById("results-info");
+      const grid        = document.getElementById("gallery-grid");
+      const groups      = document.getElementById("country-groups");
+      const loading     = document.getElementById("gallery-loading");
+      const empty       = document.getElementById("gallery-empty");
+      const info        = document.getElementById("results-info");
+      const sort        = document.getElementById("sort-select").value;
+      const isCountry   = sort === "country-az" || sort === "country-za";
 
       if (loading) loading.style.display = "none";
 
       if (sets.length === 0) {
         grid.innerHTML = "";
+        groups.innerHTML = "";
+        grid.style.display = "";
+        groups.style.display = "none";
         empty.style.display = "block";
         const q = document.getElementById("search-input").value.trim();
         const catName = activeCategory
@@ -185,7 +279,6 @@
 
       empty.style.display = "none";
 
-      // Build results info text
       const q = document.getElementById("search-input").value.trim();
       const catName = activeCategory
         ? (allCategories.find(c => c.id === activeCategory)?.name || "")
@@ -195,23 +288,48 @@
       if (q) infoText += ` matching "${q}"`;
       info.textContent = infoText;
 
-      grid.innerHTML = sets.map((set, i) => `
-        <a href="set.html?id=${esc(set.id)}" class="gallery-card" style="animation-delay:${i * 40}ms">
-          <div class="card-image-wrap">
-            <img
-              src="${esc(set.imageUrl || "")}"
-              alt="${esc(set.name)}"
-              class="card-image"
-              loading="lazy"
-              onerror="this.src='img/placeholder.svg'"
-            />
-            <div class="card-overlay">
-              <span class="card-name">${esc(set.name)}</span>
-              <span class="card-country">${set.setNo != null ? `#${set.setNo}` : ""}${set.setNo != null && set.country ? " · " : ""}${esc(set.country || "")}</span>
-            </div>
-          </div>
-        </a>
-      `).join("");
+      if (isCountry) {
+        // ── Grouped view ───────────────────────────────────────────────────
+        grid.style.display = "none";
+        grid.innerHTML = "";
+        groups.style.display = "block";
+
+        // Group sets by country
+        const grouped = {};
+        sets.forEach(set => {
+          const key = set.country && set.country.trim() ? set.country.trim() : "__unknown__";
+          if (!grouped[key]) grouped[key] = [];
+          grouped[key].push(set);
+        });
+
+        // Sort group keys
+        let keys = Object.keys(grouped).filter(k => k !== "__unknown__");
+        keys.sort((a, b) => sort === "country-za" ? b.localeCompare(a) : a.localeCompare(b));
+        if (grouped["__unknown__"]) keys.push("__unknown__");
+
+        groups.innerHTML = keys.map((key, gi) => {
+          const countryName = key === "__unknown__" ? "Unknown" : key;
+          const [border, bg, text] = getCountryColors(countryName);
+          const groupSets = grouped[key];
+          const cardsHtml = groupSets.map((set, i) => renderCardHTML(set, gi * 20 + i)).join("");
+
+          return `
+            <div class="country-group" style="--cg-border:${border}; --cg-bg:${bg}; --cg-text:${text}">
+              <div class="country-group-label">
+                <span class="country-name">${esc(countryName)}</span>
+                <span class="country-count">${groupSets.length} set${groupSets.length !== 1 ? "s" : ""}</span>
+              </div>
+              <div class="gallery-grid country-group-grid">${cardsHtml}</div>
+            </div>`;
+        }).join("");
+
+      } else {
+        // ── Flat view ──────────────────────────────────────────────────────
+        groups.style.display = "none";
+        groups.innerHTML = "";
+        grid.style.display = "";
+        grid.innerHTML = sets.map((set, i) => renderCardHTML(set, i)).join("");
+      }
     }
 
     function normalise(s) { return String(s == null ? "" : s).toLowerCase().replace(/[^a-z0-9 ]/g, " "); }

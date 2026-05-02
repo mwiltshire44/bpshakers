@@ -1211,6 +1211,75 @@ a { color: inherit; text-decoration: none; }
   flex-wrap: wrap;
 }
 
+
+/* ── Country-grouped gallery view ─────────────────────────────────────── */
+#country-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+.country-group {
+  border: 2px solid var(--cg-border, var(--clay));
+  background: var(--cg-bg, var(--cream));
+  border-radius: var(--radius-lg);
+  padding: 28px 24px 24px;
+  position: relative;
+  box-shadow: var(--shadow-sm);
+  margin-top: 24px;
+}
+
+.country-group-label {
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--cg-bg, var(--cream-card));
+  border: 2px solid var(--cg-border, var(--clay));
+  border-radius: 30px;
+  padding: 5px 18px 5px 14px;
+  white-space: nowrap;
+  box-shadow: var(--shadow-sm);
+}
+
+.country-flag {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.country-name {
+  font-family: 'Playfair Display', serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--cg-text, var(--espresso));
+  letter-spacing: -0.01em;
+}
+
+.country-count {
+  font-family: 'Lora', serif;
+  font-size: 0.75rem;
+  color: var(--cg-text, var(--espresso));
+  opacity: 0.6;
+  font-style: italic;
+}
+
+.country-group-grid {
+  margin-top: 8px;
+}
+
+@media (max-width: 640px) {
+  .country-group {
+    padding: 24px 14px 18px;
+  }
+  .country-group-label {
+    padding: 4px 14px 4px 10px;
+  }
+  .country-name { font-size: 0.88rem; }
+}
+
 /* ============================================================
    RESPONSIVE — Mobile first, thorough
    ============================================================ */
