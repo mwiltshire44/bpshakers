@@ -1216,7 +1216,7 @@ a { color: inherit; text-decoration: none; }
 #country-groups {
   display: flex;
   flex-direction: column;
-  gap: 40px;
+  gap: 64px;
 }
 
 .country-group {
@@ -1226,7 +1226,7 @@ a { color: inherit; text-decoration: none; }
   padding: 28px 24px 24px;
   position: relative;
   box-shadow: var(--shadow-sm);
-  margin-top: 24px;
+  margin-top: 20px;
 }
 
 .country-group-label {
@@ -1243,11 +1243,6 @@ a { color: inherit; text-decoration: none; }
   padding: 5px 18px 5px 14px;
   white-space: nowrap;
   box-shadow: var(--shadow-sm);
-}
-
-.country-flag {
-  font-size: 1.2rem;
-  line-height: 1;
 }
 
 .country-name {
@@ -1278,6 +1273,59 @@ a { color: inherit; text-decoration: none; }
     padding: 4px 14px 4px 10px;
   }
   .country-name { font-size: 0.88rem; }
+}
+
+
+/* ── Province sub-groups (inside country boxes) ───────────────────────── */
+.province-group {
+  border: 1.5px solid rgba(var(--cg-border-rgb, 100,60,20), 0.35);
+  border-color: color-mix(in srgb, var(--cg-border, var(--clay)) 45%, transparent);
+  border-radius: var(--radius);
+  padding: 22px 18px 18px;
+  position: relative;
+  margin-top: 28px;
+  background: rgba(255,255,255,0.35);
+}
+
+.province-group-label {
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--cg-bg, var(--cream));
+  border: 1.5px solid var(--cg-border, var(--clay));
+  border-radius: 20px;
+  padding: 3px 14px;
+  white-space: nowrap;
+  opacity: 0.85;
+}
+
+.province-name {
+  font-family: 'Lora', serif;
+  font-size: 0.82rem;
+  font-weight: 500;
+  font-style: italic;
+  color: var(--cg-text, var(--espresso));
+  letter-spacing: 0.02em;
+}
+
+.province-group-grid {
+  margin-top: 6px;
+}
+
+/* Sets with no province — rendered after province boxes, no wrapper */
+.province-remainder-grid {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px dashed rgba(0,0,0,0.1);
+}
+
+@media (max-width: 640px) {
+  .province-group { padding: 18px 12px 14px; margin-top: 22px; }
+  .province-group-label { padding: 3px 10px; }
 }
 
 /* ============================================================
@@ -1379,4 +1427,13 @@ a { color: inherit; text-decoration: none; }
   .gallery-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .site-title { font-size: 1rem; }
   .header-nav { gap: 4px; }
+}
+
+select.form-input {
+  padding-right: 36px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23a07a58' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  -webkit-appearance: none;
+  appearance: none;
 }

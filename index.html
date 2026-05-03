@@ -228,6 +228,8 @@
       return COUNTRY_COLORS[country] || DEFAULT_COLORS;
     }
 
+
+
     function renderCardHTML(set, i) {
       return `
         <a href="set.html?id=${esc(set.id)}" class="gallery-card" style="animation-delay:${i * 40}ms">
@@ -294,6 +296,9 @@
         grid.innerHTML = "";
         groups.style.display = "block";
 
+        // Countries that get province sub-grouping
+        const PROVINCE_COUNTRIES = ["Canada", "USA"];
+
         // Group sets by country
         const grouped = {};
         sets.forEach(set => {
@@ -302,7 +307,7 @@
           grouped[key].push(set);
         });
 
-        // Sort group keys
+        // Sort country keys
         let keys = Object.keys(grouped).filter(k => k !== "__unknown__");
         keys.sort((a, b) => sort === "country-za" ? b.localeCompare(a) : a.localeCompare(b));
         if (grouped["__unknown__"]) keys.push("__unknown__");
@@ -311,7 +316,51 @@
           const countryName = key === "__unknown__" ? "Unknown" : key;
           const [border, bg, text] = getCountryColors(countryName);
           const groupSets = grouped[key];
-          const cardsHtml = groupSets.map((set, i) => renderCardHTML(set, gi * 20 + i)).join("");
+          const useProvinces = PROVINCE_COUNTRIES.includes(countryName);
+
+          let innerHtml = "";
+          if (useProvinces) {
+            // Sub-group by province
+            const byProvince = {};
+            const noProvince = [];
+            groupSets.forEach(set => {
+              const prov = set.province && set.province.trim() ? set.province.trim() : null;
+              if (prov) {
+                if (!byProvince[prov]) byProvince[prov] = [];
+                byProvince[prov].push(set);
+              } else {
+                noProvince.push(set);
+              }
+            });
+
+            // Sort province keys
+            let provKeys = Object.keys(byProvince);
+            provKeys.sort((a, b) => sort === "country-za" ? b.localeCompare(a) : a.localeCompare(b));
+
+            // Province boxes
+            innerHtml += provKeys.map((prov, pi) => {
+              const provSets = byProvince[prov];
+              const provCards = provSets.map((set, i) => renderCardHTML(set, gi * 50 + pi * 20 + i)).join("");
+              return `
+                <div class="province-group">
+                  <div class="province-group-label">
+                    <span class="province-name">${esc(prov)}</span>
+                    <span class="country-count">${provSets.length} set${provSets.length !== 1 ? "s" : ""}</span>
+                  </div>
+                  <div class="gallery-grid province-group-grid">${provCards}</div>
+                </div>`;
+            }).join("");
+
+            // Sets with no province go after all province boxes, no sub-box
+            if (noProvince.length > 0) {
+              const noProvCards = noProvince.map((set, i) => renderCardHTML(set, gi * 50 + 40 + i)).join("");
+              innerHtml += `<div class="gallery-grid province-remainder-grid">${noProvCards}</div>`;
+            }
+
+          } else {
+            // Flat grid for non-province countries
+            innerHtml = `<div class="gallery-grid country-group-grid">${groupSets.map((set, i) => renderCardHTML(set, gi * 20 + i)).join("")}</div>`;
+          }
 
           return `
             <div class="country-group" style="--cg-border:${border}; --cg-bg:${bg}; --cg-text:${text}">
@@ -319,7 +368,7 @@
                 <span class="country-name">${esc(countryName)}</span>
                 <span class="country-count">${groupSets.length} set${groupSets.length !== 1 ? "s" : ""}</span>
               </div>
-              <div class="gallery-grid country-group-grid">${cardsHtml}</div>
+              ${innerHtml}
             </div>`;
         }).join("");
 
@@ -343,7 +392,7 @@
         if (activeCategory && !(set.categories || []).map(String).includes(String(activeCategory))) return false;
         // Text search
         if (!q) return true;
-        const haystack = [set.name, set.year, set.country, set.city, set.giftedBy, set.description]
+        const haystack = [set.setNo, set.name, set.year, set.country, set.province, set.city, set.giftedBy, set.description]
           .map(normalise).join(" ");
         return q.split(" ").filter(Boolean).every(word => haystack.includes(word));
       });

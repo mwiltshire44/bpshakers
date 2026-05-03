@@ -152,8 +152,8 @@
         setText("meta-year", set.year || "");
         showRow("row-year", set.year);
 
-        // Origin: city + country
-        const origin = [set.city, set.country].filter(Boolean).join(", ");
+        // Origin: country, province, city
+        const origin = [set.country, set.province, set.city].filter(Boolean).join(", ");
         setText("meta-origin", origin);
         showRow("row-origin", origin);
 
