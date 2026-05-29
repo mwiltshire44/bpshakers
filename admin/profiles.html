@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manage Profiles — The Salt & Pepper Collection</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/main.css" />
+  <style>
+    /* ── Profile row ── */
+    .profile-row {
+      border-bottom: 1px solid rgba(200,170,130,0.25);
+      padding: 14px 0;
+    }
+    .profile-row:last-child { border-bottom: none; }
+
+    /* Static view */
+    .profile-row-view {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .profile-view-text { flex: 1; min-width: 0; }
+    .profile-name-text {
+      font-family: 'Lora', serif;
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: var(--text);
+      display: block;
+      margin-bottom: 3px;
+    }
+    .profile-desc-text {
+      font-family: 'Lora', serif;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-style: italic;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .profile-row-btns {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+      padding-top: 2px;
+    }
+
+    /* Edit view */
+    .profile-row-edit {
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .profile-row.editing .profile-row-view { display: none; }
+    .profile-row.editing .profile-row-edit { display: flex; }
+
+    .profile-edit-input,
+    .profile-edit-textarea {
+      font-family: 'Lora', serif;
+      font-size: 0.95rem;
+      color: var(--text);
+      border: 2px solid var(--clay);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      background: var(--cream);
+      outline: none;
+      width: 100%;
+      box-sizing: border-box;
+      box-shadow: 0 0 0 3px rgba(184,92,56,0.12);
+      transition: border-color 0.2s;
+    }
+    .profile-edit-input:focus,
+    .profile-edit-textarea:focus { border-color: var(--clay-dark); }
+    .profile-edit-textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .profile-edit-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .btn-confirm {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 14px;
+      border-radius: var(--radius-sm);
+      font-family: 'Lora', serif;
+      font-size: 0.82rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1.5px solid #4a7a4a;
+      background: #edf5ed;
+      color: #2d5a2d;
+      transition: background 0.18s, border-color 0.18s;
+      white-space: nowrap;
+    }
+    .btn-confirm:hover { background: #d4ebd4; border-color: #2d5a2d; }
+    .btn-confirm:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .btn-cancel-edit {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      font-family: 'Lora', serif;
+      font-size: 0.82rem;
+      cursor: pointer;
+      border: 1.5px solid var(--parchment);
+      background: var(--cream-dark);
+      color: var(--text-muted);
+      transition: background 0.18s;
+    }
+    .btn-cancel-edit:hover { background: var(--parchment); }
+
+    .profile-edit-error {
+      font-family: 'Lora', serif;
+      font-size: 0.78rem;
+      color: var(--clay-dark);
+      font-style: italic;
+    }
+
+    /* Add new profile form */
+    .profile-add-fields {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .profile-add-fields .form-input { width: 100%; box-sizing: border-box; }
+
+    .profile-add-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+  </style>
+</head>
+<body class="admin-page">
+
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="header-title">
+        <span class="header-eyebrow">Admin Panel</span>
+        <h1 class="site-title"><a href="../index.html" class="title-link">The Salt &amp; Pepper Shakers</a></h1>
+      </div>
+      <nav class="header-nav">
+        <a href="index.html" class="nav-link">← Manage Sets</a>
+        <a href="#" class="nav-link" id="logout-btn">Sign Out</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <div class="edit-form-wrap">
+      <div class="admin-toolbar">
+        <h2 class="admin-heading">Manage Profiles</h2>
+      </div>
+
+      <p class="categories-intro">Profiles are short bios for people referenced in your sets. Once created, you can link to them from the Description and Gifted By fields when editing a set.</p>
+
+      <!-- Add new profile -->
+      <section class="form-section">
+        <h3 class="section-title">Add a New Profile</h3>
+        <div class="profile-add-fields">
+          <input type="text" id="new-profile-name" class="form-input" placeholder="Name — e.g. Aunt Margaret" maxlength="80" />
+          <textarea id="new-profile-desc" class="form-input form-textarea" placeholder="A short bio or note about this person…" rows="3" style="resize:vertical"></textarea>
+        </div>
+        <div class="profile-add-actions" style="margin-top:12px">
+          <button class="btn-primary" onclick="addProfile()">Add Profile</button>
+        </div>
+        <div class="form-error" id="profile-error" style="display:none; margin-top:10px"></div>
+        <div class="form-success" id="profile-success" style="display:none; margin-top:10px"></div>
+      </section>
+
+      <!-- Existing profiles -->
+      <section class="form-section">
+        <h3 class="section-title">Existing Profiles</h3>
+        <div id="profiles-loading" class="admin-empty">
+          <div class="loading-dots"><span></span><span></span><span></span></div>
+        </div>
+        <div id="profiles-list" class="cats-list"></div>
+        <div id="profiles-empty" class="admin-empty" style="display:none">
+          <p>No profiles yet. Add one above!</p>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <p>Admin Panel &mdash; The Salt &amp; Pepper Collection</p>
+  </footer>
+
+  <!-- Delete confirmation modal -->
+  <div class="modal-overlay" id="delete-modal" style="display:none">
+    <div class="modal-card">
+      <h3 class="modal-title">Delete this profile?</h3>
+      <p class="modal-body">This will remove "<span id="delete-profile-name"></span>". Any links to this profile in set descriptions will display as plain text instead of a clickable link.</p>
+      <div class="modal-actions">
+        <button class="btn-soft" onclick="closeDeleteModal()">Cancel</button>
+        <button class="btn-danger" id="confirm-delete-btn" onclick="confirmDelete()">Yes, Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc, updateDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { firebaseConfig } from "../js/firebase-config.js";
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    let pendingDeleteId = null;
+    let profiles = [];
+
+    onAuthStateChanged(auth, (user) => {
+      if (!user) { window.location.href = "login.html"; return; }
+      loadProfiles();
+    });
+
+    document.getElementById("logout-btn").addEventListener("click", async (e) => {
+      e.preventDefault();
+      await signOut(auth);
+      window.location.href = "../index.html";
+    });
+
+    // Allow Enter in name field to move to description
+    document.getElementById("new-profile-name").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        document.getElementById("new-profile-desc").focus();
+      }
+    });
+
+    async function loadProfiles() {
+      const loading = document.getElementById("profiles-loading");
+      const list = document.getElementById("profiles-list");
+      const empty = document.getElementById("profiles-empty");
+      loading.style.display = "block";
+      list.innerHTML = "";
+
+      try {
+        const q = query(collection(db, "profiles"), orderBy("name"));
+        const snap = await getDocs(q);
+        profiles = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        loading.style.display = "none";
+
+        if (profiles.length === 0) {
+          empty.style.display = "block";
+          return;
+        }
+
+        empty.style.display = "none";
+        list.innerHTML = profiles.map(p => buildProfileRowHTML(p)).join("");
+
+      } catch (e) {
+        loading.innerHTML = `<p style="color:var(--clay)">Error loading profiles: ${e.message}</p>`;
+      }
+    }
+
+    function buildProfileRowHTML(p) {
+      const descPreview = p.description
+        ? `<span class="profile-desc-text">${esc(p.description)}</span>`
+        : `<span class="profile-desc-text" style="opacity:0.45">No description</span>`;
+
+      return `
+        <div class="profile-row" id="profile-row-${esc(p.id)}">
+
+          <!-- Static view -->
+          <div class="profile-row-view">
+            <div class="profile-view-text">
+              <span class="profile-name-text">${esc(p.name)}</span>
+              ${descPreview}
+            </div>
+            <div class="profile-row-btns">
+              <button class="btn-sm btn-edit-sm" onclick="startEdit('${esc(p.id)}')">Edit</button>
+              <button class="btn-sm btn-del" onclick="openDeleteModal('${esc(p.id)}', '${esc(p.name)}')">Delete</button>
+            </div>
+          </div>
+
+          <!-- Edit view -->
+          <div class="profile-row-edit">
+            <input
+              type="text"
+              class="profile-edit-input"
+              id="edit-name-${esc(p.id)}"
+              value="${esc(p.name)}"
+              maxlength="80"
+              placeholder="Name"
+              aria-label="Edit profile name"
+            />
+            <textarea
+              class="profile-edit-textarea"
+              id="edit-desc-${esc(p.id)}"
+              placeholder="Description"
+              rows="3"
+              aria-label="Edit profile description"
+            >${esc(p.description || "")}</textarea>
+            <div class="profile-edit-actions">
+              <button class="btn-confirm" onclick="saveEdit('${esc(p.id)}')">Confirm</button>
+              <button class="btn-cancel-edit" onclick="cancelEdit('${esc(p.id)}')">Cancel</button>
+              <span class="profile-edit-error" id="edit-error-${esc(p.id)}"></span>
+            </div>
+          </div>
+
+        </div>
+      `;
+    }
+
+    window.startEdit = function(id) {
+      // Close any other open edits
+      document.querySelectorAll(".profile-row.editing").forEach(row => {
+        const otherId = row.id.replace("profile-row-", "");
+        if (otherId !== id) cancelEdit(otherId);
+      });
+
+      const row = document.getElementById(`profile-row-${id}`);
+      row.classList.add("editing");
+      document.getElementById(`edit-name-${id}`).focus();
+    };
+
+    window.cancelEdit = function(id) {
+      const row = document.getElementById(`profile-row-${id}`);
+      row.classList.remove("editing");
+      const p = profiles.find(p => p.id === id);
+      if (p) {
+        document.getElementById(`edit-name-${id}`).value = p.name;
+        document.getElementById(`edit-desc-${id}`).value = p.description || "";
+      }
+      document.getElementById(`edit-error-${id}`).textContent = "";
+    };
+
+    window.saveEdit = async function(id) {
+      const nameInput = document.getElementById(`edit-name-${id}`);
+      const descInput = document.getElementById(`edit-desc-${id}`);
+      const errEl = document.getElementById(`edit-error-${id}`);
+      const newName = nameInput.value.trim();
+      const newDesc = descInput.value.trim();
+      errEl.textContent = "";
+
+      if (!newName) {
+        errEl.textContent = "Name can't be empty.";
+        nameInput.focus();
+        return;
+      }
+
+      const duplicate = profiles.find(p => p.id !== id && p.name.toLowerCase() === newName.toLowerCase());
+      if (duplicate) {
+        errEl.textContent = `"${newName}" already exists.`;
+        nameInput.focus();
+        return;
+      }
+
+      const confirmBtn = document.querySelector(`#profile-row-${id} .btn-confirm`);
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = "Saving…";
+
+      try {
+        await updateDoc(doc(db, "profiles", id), { name: newName, description: newDesc });
+        const p = profiles.find(p => p.id === id);
+        if (p) { p.name = newName; p.description = newDesc; }
+
+        // Update static display without full reload
+        const row = document.getElementById(`profile-row-${id}`);
+        row.querySelector(".profile-name-text").textContent = newName;
+        const descEl = row.querySelector(".profile-desc-text");
+        if (newDesc) {
+          descEl.textContent = newDesc;
+          descEl.style.opacity = "";
+        } else {
+          descEl.textContent = "No description";
+          descEl.style.opacity = "0.45";
+        }
+        row.querySelector(".btn-del").setAttribute("onclick", `openDeleteModal('${esc(id)}', '${esc(newName)}')`);
+
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = "Confirm";
+        row.classList.remove("editing");
+      } catch (e) {
+        errEl.textContent = "Save failed: " + e.message;
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = "Confirm";
+      }
+    };
+
+    window.addProfile = async function() {
+      const nameInput = document.getElementById("new-profile-name");
+      const descInput = document.getElementById("new-profile-desc");
+      const name = nameInput.value.trim();
+      const description = descInput.value.trim();
+      const errEl = document.getElementById("profile-error");
+      const successEl = document.getElementById("profile-success");
+      errEl.style.display = "none";
+      successEl.style.display = "none";
+
+      if (!name) {
+        errEl.textContent = "Please enter a name.";
+        errEl.style.display = "block";
+        nameInput.focus();
+        return;
+      }
+
+      const duplicate = profiles.find(p => p.name.toLowerCase() === name.toLowerCase());
+      if (duplicate) {
+        errEl.textContent = `"${name}" already exists.`;
+        errEl.style.display = "block";
+        return;
+      }
+
+      try {
+        await addDoc(collection(db, "profiles"), { name, description });
+        nameInput.value = "";
+        descInput.value = "";
+        successEl.textContent = `"${name}" added!`;
+        successEl.style.display = "block";
+        setTimeout(() => successEl.style.display = "none", 2500);
+        loadProfiles();
+      } catch (e) {
+        errEl.textContent = "Error adding profile: " + e.message;
+        errEl.style.display = "block";
+      }
+    };
+
+    window.openDeleteModal = function(id, name) {
+      pendingDeleteId = id;
+      document.getElementById("delete-profile-name").textContent = name;
+      document.getElementById("delete-modal").style.display = "flex";
+    };
+
+    window.closeDeleteModal = function() {
+      document.getElementById("delete-modal").style.display = "none";
+      pendingDeleteId = null;
+    };
+
+    window.confirmDelete = async function() {
+      if (!pendingDeleteId) return;
+      const btn = document.getElementById("confirm-delete-btn");
+      btn.textContent = "Deleting…";
+      btn.disabled = true;
+      try {
+        await deleteDoc(doc(db, "profiles", pendingDeleteId));
+        closeDeleteModal();
+        loadProfiles();
+      } catch (e) {
+        alert("Error deleting: " + e.message);
+        btn.textContent = "Yes, Delete";
+        btn.disabled = false;
+      }
+    };
+
+    function esc(s) {
+      return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+    }
+  </script>
+</body>
+</html>

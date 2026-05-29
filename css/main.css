@@ -1437,3 +1437,54 @@ select.form-input {
   -webkit-appearance: none;
   appearance: none;
 }
+
+/* ── Profile links (in set detail page) ── */
+.profile-link {
+  color: var(--clay);
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  font-style: inherit;
+  transition: color 0.15s;
+}
+.profile-link:hover {
+  color: var(--clay-dark);
+  text-decoration-style: solid;
+}
+
+/* ── Profile modal card ── */
+.profile-modal-card {
+  position: relative;
+  max-width: 400px;
+  width: 90vw;
+}
+.profile-modal-close {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  background: none;
+  border: none;
+  font-size: 1.4rem;
+  line-height: 1;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0 4px;
+  transition: color 0.15s;
+}
+.profile-modal-close:hover { color: var(--clay-dark); }
+.profile-modal-name {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.15rem;
+  color: var(--espresso);
+  margin: 0 0 10px;
+  padding-right: 24px;
+}
+.profile-modal-desc {
+  font-family: 'Lora', serif;
+  font-size: 0.9rem;
+  color: var(--text);
+  line-height: 1.65;
+  margin: 0;
+  white-space: pre-wrap;
+}

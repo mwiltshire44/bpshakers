@@ -8,6 +8,167 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="../css/main.css" />
+  <style>
+    /* ── Profile link picker ── */
+    .profile-link-wrap {
+      position: relative;
+    }
+    .profile-link-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-bottom: 6px;
+      padding: 4px 11px;
+      font-family: 'Lora', serif;
+      font-size: 0.78rem;
+      cursor: pointer;
+      border: 1.5px solid var(--clay);
+      border-radius: var(--radius-sm);
+      background: var(--cream);
+      color: var(--clay-dark);
+      transition: background 0.15s;
+    }
+    .profile-link-btn:hover { background: var(--parchment); }
+
+    .profile-picker-panel {
+      display: none;
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      z-index: 200;
+      background: var(--cream);
+      border: 1.5px solid var(--clay);
+      border-radius: var(--radius-sm);
+      box-shadow: 0 6px 24px rgba(46,26,14,0.14);
+      width: 320px;
+      max-width: 95vw;
+    }
+    .profile-picker-panel.open { display: block; }
+
+    .picker-header {
+      padding: 10px 14px 8px;
+      font-family: 'Lora', serif;
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      border-bottom: 1px solid rgba(200,170,130,0.3);
+    }
+    .picker-list {
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .picker-item {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 8px 14px;
+      font-family: 'Lora', serif;
+      font-size: 0.88rem;
+      color: var(--text);
+      background: none;
+      border: none;
+      cursor: pointer;
+      border-bottom: 1px solid rgba(200,170,130,0.15);
+      transition: background 0.12s;
+    }
+    .picker-item:last-child { border-bottom: none; }
+    .picker-item:hover { background: var(--parchment); }
+    .picker-item-desc {
+      display: block;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-style: italic;
+      margin-top: 1px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .picker-empty {
+      padding: 12px 14px;
+      font-family: 'Lora', serif;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+    .picker-create-btn {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 9px 14px;
+      font-family: 'Lora', serif;
+      font-size: 0.85rem;
+      color: var(--clay-dark);
+      font-weight: 500;
+      background: none;
+      border: none;
+      border-top: 1px solid rgba(200,170,130,0.3);
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .picker-create-btn:hover { background: var(--parchment); }
+
+    /* Inline create-profile mini form inside picker */
+    .picker-create-form {
+      display: none;
+      padding: 10px 14px 12px;
+      border-top: 1px solid rgba(200,170,130,0.3);
+      flex-direction: column;
+      gap: 7px;
+    }
+    .picker-create-form.open { display: flex; }
+    .picker-mini-input,
+    .picker-mini-textarea {
+      font-family: 'Lora', serif;
+      font-size: 0.85rem;
+      color: var(--text);
+      border: 1.5px solid var(--clay);
+      border-radius: var(--radius-sm);
+      padding: 5px 9px;
+      background: var(--cream);
+      outline: none;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .picker-mini-textarea { resize: vertical; min-height: 56px; }
+    .picker-mini-actions {
+      display: flex;
+      gap: 7px;
+    }
+    .picker-mini-save {
+      padding: 5px 12px;
+      font-family: 'Lora', serif;
+      font-size: 0.8rem;
+      font-weight: 500;
+      border: 1.5px solid #4a7a4a;
+      background: #edf5ed;
+      color: #2d5a2d;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+    }
+    .picker-mini-save:disabled { opacity: 0.6; cursor: not-allowed; }
+    .picker-mini-cancel {
+      padding: 5px 10px;
+      font-family: 'Lora', serif;
+      font-size: 0.8rem;
+      border: 1.5px solid var(--parchment);
+      background: var(--cream-dark);
+      color: var(--text-muted);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+    }
+    .picker-mini-error {
+      font-family: 'Lora', serif;
+      font-size: 0.75rem;
+      color: var(--clay-dark);
+      font-style: italic;
+    }
+
+    /* Highlight the selected text feel — subtle input border glow when picker open */
+    .profile-link-wrap input:focus,
+    .profile-link-wrap textarea:focus {
+      border-color: var(--clay-dark);
+    }
+  </style>
 </head>
 <body class="admin-page">
 
@@ -84,7 +245,11 @@
           </div>
           <div class="form-group">
             <label class="form-label" for="f-gifted">Gifted by</label>
-            <input type="text" id="f-gifted" class="form-input" placeholder="e.g. Aunt Margaret" />
+            <div class="profile-link-wrap" id="wrap-gifted">
+              <button type="button" class="profile-link-btn" onclick="openPicker('gifted')">&#128279; Link to Profile</button>
+              <div class="profile-picker-panel" id="picker-gifted"></div>
+              <input type="text" id="f-gifted" class="form-input" placeholder="e.g. Aunt Margaret" />
+            </div>
           </div>
           <div class="form-group">
             <label class="form-label" for="f-country">Country</label>
@@ -372,7 +537,11 @@
           </div>
           <div class="form-group full-width">
             <label class="form-label" for="f-desc">Description <span class="form-optional">(optional)</span></label>
-            <textarea id="f-desc" class="form-input form-textarea" placeholder="Any notes, history, or details about this set…" rows="4"></textarea>
+            <div class="profile-link-wrap" id="wrap-desc">
+              <button type="button" class="profile-link-btn" onclick="openPicker('desc')">&#128279; Link to Profile</button>
+              <div class="profile-picker-panel" id="picker-desc"></div>
+              <textarea id="f-desc" class="form-input form-textarea" placeholder="Any notes, history, or details about this set…" rows="4"></textarea>
+            </div>
           </div>
         </div>
       </section>
@@ -895,6 +1064,134 @@
     function escHtml(s) {
       return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
     }
+
+    // ─── Profile Link Picker ──────────────────────────────────────────────────
+    let allProfiles = null;
+
+    async function ensureProfilesLoaded() {
+      if (allProfiles !== null) return;
+      try {
+        const { getDocs, collection: col, query: q, orderBy } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+        const snap = await getDocs(q(col(db, "profiles"), orderBy("name")));
+        allProfiles = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      } catch(e) {
+        allProfiles = [];
+      }
+    }
+
+    window.openPicker = async function(fieldId) {
+      const otherFieldId = fieldId === 'gifted' ? 'desc' : 'gifted';
+      closePicker(otherFieldId);
+
+      const panel = document.getElementById('picker-' + fieldId);
+      if (panel.classList.contains('open')) { closePicker(fieldId); return; }
+
+      panel.innerHTML = '<div class="picker-header">Loading profiles\u2026</div>';
+      panel.classList.add('open');
+
+      await ensureProfilesLoaded();
+      renderPickerPanel(fieldId);
+
+      setTimeout(() => {
+        document.addEventListener('click', function outsideHandler(e) {
+          const wrap = document.getElementById('wrap-' + fieldId);
+          if (!wrap || !wrap.contains(e.target)) {
+            closePicker(fieldId);
+            document.removeEventListener('click', outsideHandler);
+          }
+        });
+      }, 0);
+    };
+
+    function closePicker(fieldId) {
+      const panel = document.getElementById('picker-' + fieldId);
+      if (panel) panel.classList.remove('open');
+    }
+
+    function renderPickerPanel(fieldId) {
+      const panel = document.getElementById('picker-' + fieldId);
+      const profiles = allProfiles || [];
+
+      const listHTML = profiles.length === 0
+        ? '<div class="picker-empty">No profiles yet. Create one below.</div>'
+        : profiles.map(p => {
+            const nameEsc = escHtml(p.name);
+            const idEsc = escHtml(p.id);
+            const descSnippet = p.description
+              ? '<span class="picker-item-desc">' + escHtml(p.description.slice(0, 60)) + (p.description.length > 60 ? '\u2026' : '') + '</span>'
+              : '';
+            return '<button type="button" class="picker-item" '
+              + 'onclick="insertProfileLink(\'' + fieldId + '\', \'' + idEsc + '\', \'' + nameEsc.replace(/'/g, "\\'") + '\')">'
+              + nameEsc + descSnippet + '</button>';
+          }).join('');
+
+      panel.innerHTML =
+        '<div class="picker-header">Select a profile to link</div>'
+        + '<div class="picker-list">' + listHTML + '</div>'
+        + '<button type="button" class="picker-create-btn" onclick="toggleCreateForm(\'' + fieldId + '\')">+ Create New Profile</button>'
+        + '<div class="picker-create-form" id="create-form-' + fieldId + '">'
+        + '<input type="text" class="picker-mini-input" id="mini-name-' + fieldId + '" placeholder="Name" maxlength="80" />'
+        + '<textarea class="picker-mini-textarea" id="mini-desc-' + fieldId + '" placeholder="Description (optional)" rows="2"></textarea>'
+        + '<div class="picker-mini-actions">'
+        + '<button type="button" class="picker-mini-save" onclick="saveNewProfileFromPicker(\'' + fieldId + '\')">Save &amp; Link</button>'
+        + '<button type="button" class="picker-mini-cancel" onclick="toggleCreateForm(\'' + fieldId + '\')">Cancel</button>'
+        + '</div>'
+        + '<span class="picker-mini-error" id="mini-error-' + fieldId + '"></span>'
+        + '</div>';
+    }
+
+    window.toggleCreateForm = function(fieldId) {
+      const form = document.getElementById('create-form-' + fieldId);
+      const isOpen = form.classList.toggle('open');
+      if (isOpen) document.getElementById('mini-name-' + fieldId).focus();
+    };
+
+    window.saveNewProfileFromPicker = async function(fieldId) {
+      const nameInput = document.getElementById('mini-name-' + fieldId);
+      const descInput = document.getElementById('mini-desc-' + fieldId);
+      const errEl = document.getElementById('mini-error-' + fieldId);
+      const name = nameInput.value.trim();
+      const description = descInput.value.trim();
+      errEl.textContent = '';
+
+      if (!name) { errEl.textContent = 'Name is required.'; nameInput.focus(); return; }
+
+      const dup = (allProfiles || []).find(p => p.name.toLowerCase() === name.toLowerCase());
+      if (dup) { errEl.textContent = 'That name already exists.'; return; }
+
+      const saveBtn = document.querySelector('#create-form-' + fieldId + ' .picker-mini-save');
+      saveBtn.disabled = true; saveBtn.textContent = 'Saving\u2026';
+
+      try {
+        const { addDoc, collection: col } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+        const docRef = await addDoc(col(db, "profiles"), { name, description });
+        const newProfile = { id: docRef.id, name, description };
+        allProfiles = [...(allProfiles || []), newProfile].sort((a, b) => a.name.localeCompare(b.name));
+        insertProfileLink(fieldId, docRef.id, name);
+        closePicker(fieldId);
+      } catch(e) {
+        errEl.textContent = 'Save failed: ' + e.message;
+        saveBtn.disabled = false; saveBtn.textContent = 'Save & Link';
+      }
+    };
+
+    window.insertProfileLink = function(fieldId, profileId, profileName) {
+      const inputEl = document.getElementById(fieldId === 'gifted' ? 'f-gifted' : 'f-desc');
+      const start = inputEl.selectionStart;
+      const end = inputEl.selectionEnd;
+      const currentVal = inputEl.value;
+
+      const selectedText = currentVal.slice(start, end).trim();
+      const displayText = selectedText || profileName;
+      const linkSyntax = '[' + displayText + '](' + profileId + ')';
+
+      inputEl.value = currentVal.slice(0, start) + linkSyntax + currentVal.slice(end);
+      const newPos = start + linkSyntax.length;
+      inputEl.setSelectionRange(newPos, newPos);
+      inputEl.focus();
+      closePicker(fieldId);
+    };
+
   </script>
 </body>
 </html>

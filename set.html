@@ -82,6 +82,16 @@
       <a href="index.html" class="btn-soft">Return to Gallery</a>
     </div>
 
+
+  <!-- Profile modal -->
+  <div class="modal-overlay" id="profile-modal" style="display:none" onclick="closeProfileModal(event)">
+    <div class="modal-card profile-modal-card">
+      <button class="profile-modal-close" onclick="closeProfileModalDirect()" aria-label="Close">&times;</button>
+      <h3 class="profile-modal-name" id="profile-modal-name"></h3>
+      <p class="profile-modal-desc" id="profile-modal-desc"></p>
+    </div>
+  </div>
+
   </main>
 
   <footer class="site-footer">
@@ -158,8 +168,12 @@
         showRow("row-origin", origin);
 
         // Gifted by
-        setText("meta-gifted", set.giftedBy || "");
-        showRow("row-gifted", set.giftedBy);
+        if (set.giftedBy) {
+          document.getElementById("meta-gifted").innerHTML = renderProfileLinks(set.giftedBy);
+          showRow("row-gifted", true);
+        } else {
+          showRow("row-gifted", false);
+        }
 
         // Categories
         if (set.categories && set.categories.length > 0) {
@@ -178,7 +192,7 @@
 
         // Description
         if (set.description) {
-          setText("set-description", set.description);
+          document.getElementById("set-description").innerHTML = renderProfileLinks(set.description);
           document.getElementById("desc-wrap").style.display = "";
         } else {
           document.getElementById("desc-wrap").style.display = "none";
@@ -201,6 +215,78 @@
     }
 
     loadSet();
+
+    // ─── Profile link rendering ───────────────────────────────────────────────
+    // Cache fetched profiles to avoid re-fetching within the same page load
+    const profileCache = {};
+
+    // Parse [Display Text](profileId) syntax into clickable spans
+    function renderProfileLinks(text) {
+      if (!text) return '';
+      // Escape HTML first, then replace link syntax
+      const escaped = text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      return escaped.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, display, profileId) => {
+        const safeDisplay = display.replace(/"/g, '&quot;');
+        const safeId = profileId.replace(/"/g, '&quot;');
+        return '<a href="#" class="profile-link" '
+          + 'onclick="openProfileModal(event, \'' + safeId + '\', \'' + safeDisplay.replace(/'/g, "\\'") + '\')">'
+          + safeDisplay + '</a>';
+      });
+    }
+
+    window.openProfileModal = async function(e, profileId, fallbackName) {
+      e.preventDefault();
+      const modal = document.getElementById('profile-modal');
+      const nameEl = document.getElementById('profile-modal-name');
+      const descEl = document.getElementById('profile-modal-desc');
+
+      nameEl.textContent = fallbackName;
+      descEl.textContent = 'Loading\u2026';
+      modal.style.display = 'flex';
+
+      if (profileCache[profileId]) {
+        const p = profileCache[profileId];
+        nameEl.textContent = p.name || fallbackName;
+        descEl.textContent = p.description || '';
+        return;
+      }
+
+      try {
+        const snap = await getDoc(doc(db, 'profiles', profileId));
+        if (snap.exists()) {
+          const p = snap.data();
+          profileCache[profileId] = p;
+          nameEl.textContent = p.name || fallbackName;
+          descEl.textContent = p.description || '';
+        } else {
+          nameEl.textContent = fallbackName;
+          descEl.textContent = '';
+        }
+      } catch(err) {
+        nameEl.textContent = fallbackName;
+        descEl.textContent = '';
+      }
+    };
+
+    window.closeProfileModal = function(e) {
+      // Close if clicking the overlay itself, not the card
+      if (e.target === document.getElementById('profile-modal')) {
+        document.getElementById('profile-modal').style.display = 'none';
+      }
+    };
+
+    window.closeProfileModalDirect = function() {
+      document.getElementById('profile-modal').style.display = 'none';
+    };
+
+    // Close modal on Escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') document.getElementById('profile-modal').style.display = 'none';
+    });
+
   </script>
 </body>
 </html>
