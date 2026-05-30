@@ -8,6 +8,123 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="../css/main.css" />
+  <style>
+    /* ── Admin list row (Option B) ── */
+    .admin-list { display: flex; flex-direction: column; gap: 0; }
+
+    .admin-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 10px 14px;
+      background: var(--cream);
+      border-bottom: 1px solid rgba(200,170,130,0.2);
+      transition: background 0.12s;
+    }
+    .admin-row:first-child { border-radius: var(--radius-sm) var(--radius-sm) 0 0; border-top: 1px solid rgba(200,170,130,0.2); }
+    .admin-row:last-child  { border-radius: 0 0 var(--radius-sm) var(--radius-sm); }
+    .admin-row:only-child  { border-radius: var(--radius-sm); }
+    .admin-row:hover { background: var(--parchment); }
+
+    .admin-row-thumb {
+      width: 68px;
+      height: 51px;
+      border-radius: 5px;
+      object-fit: cover;
+      flex-shrink: 0;
+      background: var(--parchment);
+      border: 1px solid rgba(200,170,130,0.25);
+    }
+
+    .admin-row-main {
+      flex: 1;
+      min-width: 0;
+    }
+    .admin-row-name {
+      font-family: 'Lora', serif;
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: block;
+    }
+    .admin-row-meta {
+      font-family: 'Lora', serif;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: block;
+    }
+    .admin-row-cats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 5px;
+    }
+    .admin-row-cat {
+      font-family: 'Lora', serif;
+      font-size: 0.7rem;
+      padding: 2px 7px;
+      border-radius: 99px;
+      background: rgba(184,92,56,0.1);
+      color: var(--clay-dark);
+      border: 1px solid rgba(184,92,56,0.2);
+      white-space: nowrap;
+    }
+
+    .admin-row-actions {
+      display: flex;
+      gap: 6px;
+      flex-shrink: 0;
+      align-items: center;
+    }
+
+    /* Filter bar — reuse gallery styles */
+    .admin-cat-bar,
+    .admin-profile-bar {
+      display: none;
+      padding: 0 0 6px;
+      border-bottom: 1px solid rgba(200,170,130,0.2);
+      margin-bottom: 2px;
+    }
+    .cat-filter-btn.active {
+      background: var(--clay);
+      color: #fff;
+      border-color: var(--clay-dark);
+    }
+    .filter-clear-btn {
+      flex-shrink: 0;
+      display: none;
+      align-items: center;
+      padding: 5px 11px;
+      font-family: 'Lora', serif;
+      font-size: 0.78rem;
+      cursor: pointer;
+      border: 1.5px solid rgba(184,92,56,0.4);
+      border-radius: 99px;
+      background: var(--cream);
+      color: var(--clay-dark);
+      white-space: nowrap;
+      transition: background 0.15s, border-color 0.15s;
+      margin-left: 8px;
+    }
+    .filter-clear-btn.visible { display: inline-flex; }
+    .filter-clear-btn:hover { background: rgba(184,92,56,0.08); border-color: var(--clay); }
+
+    .admin-results-info {
+      font-family: 'Lora', serif;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      font-style: italic;
+      margin: 8px 0 10px;
+      min-height: 1.2em;
+    }
+  </style>
 </head>
 <body class="admin-page">
 
@@ -30,16 +147,64 @@
       <div class="admin-toolbar-actions">
         <a href="categories.html" class="btn-soft">Manage Categories</a>
         <a href="profiles.html" class="btn-soft">Manage Profiles</a>
-        <a href="edit.html" class="btn-primary">+ Add New Set</a>
+        <a href="edit.html" class="btn-primary" id="add-new-btn">+ Add New Set</a>
       </div>
     </div>
+
+    <!-- Search & Sort -->
+    <div class="controls-bar">
+      <div class="search-wrap">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input type="text" id="search-input" class="search-input" placeholder="Search by name, number, year, origin, occasion…" autocomplete="off" />
+        <button class="search-clear" id="search-clear" aria-label="Clear search" style="display:none">✕</button>
+      </div>
+      <div class="sort-wrap">
+        <label class="sort-label" for="sort-select">Sort by</label>
+        <select id="sort-select" class="sort-select">
+          <option value="set-number">Oldest first</option>
+          <option value="set-number-desc">Newest first</option>
+          <option value="recently-added">Recently added</option>
+          <option value="az">Name A → Z</option>
+          <option value="za">Name Z → A</option>
+          <option value="country-az">By Country A → Z</option>
+          <option value="country-za">By Country Z → A</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Category filter bar -->
+    <div class="admin-cat-bar category-filter-bar" id="cat-filter-bar">
+      <span class="cat-filter-label">Category</span>
+      <div class="cat-filter-pills-scroll">
+        <div class="cat-filter-pills" id="cat-filter-pills"></div>
+      </div>
+      <button class="filter-clear-btn" id="cat-clear-btn" onclick="clearCategoryFilters()">✕ Clear</button>
+    </div>
+
+    <!-- Profile filter bar -->
+    <div class="admin-profile-bar category-filter-bar" id="profile-filter-bar">
+      <span class="cat-filter-label">Person</span>
+      <div class="cat-filter-pills-scroll">
+        <div class="cat-filter-pills" id="profile-filter-pills"></div>
+      </div>
+      <button class="filter-clear-btn" id="profile-clear-btn" onclick="clearProfileFilters()">✕ Clear</button>
+    </div>
+
+    <div class="admin-results-info" id="results-info"></div>
 
     <div id="admin-loading" class="gallery-loading">
       <div class="loading-dots"><span></span><span></span><span></span></div>
       <p>Loading sets…</p>
     </div>
 
-    <div class="admin-grid" id="admin-grid"></div>
+    <div class="admin-list" id="admin-list"></div>
+
+    <div class="gallery-empty" id="admin-empty" style="display:none">
+      <p id="empty-message">No sets found.</p>
+      <button class="btn-soft" onclick="clearFilters()">Clear filters</button>
+    </div>
   </main>
 
   <footer class="site-footer">
@@ -66,16 +231,19 @@
     import { firebaseConfig } from "../js/firebase-config.js";
 
     const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    const db  = getFirestore(app);
     const storage = getStorage(app);
     const auth = getAuth(app);
 
-    let pendingDeleteId = null;
+    let allSets = [], allCategories = [], allProfiles = [];
+    let activeCategories = new Set();
+    let activeProfiles   = new Set();
+    let pendingDeleteId  = null;
     let pendingDeleteImagePath = null;
 
     onAuthStateChanged(auth, (user) => {
       if (!user) { window.location.href = "login.html"; return; }
-      loadSets();
+      init();
     });
 
     document.getElementById("logout-btn").addEventListener("click", async (e) => {
@@ -84,41 +252,309 @@
       window.location.href = "../index.html";
     });
 
-    async function loadSets() {
-      const q = query(collection(db, "sets"), orderBy("createdAt", "desc"));
-      const snap = await getDocs(q);
-      const sets = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    // ── URL state ─────────────────────────────────────────────────────────────
+    function readStateFromURL() {
+      const p = new URLSearchParams(window.location.search);
+      return {
+        q:      p.get("q")      || "",
+        sort:   p.get("sort")   || "set-number",
+        cats:   p.get("cats")   ? p.get("cats").split(",").filter(Boolean) : [],
+        profs:  p.get("profs")  ? p.get("profs").split(",").filter(Boolean) : [],
+        scroll: p.get("scroll") ? parseInt(p.get("scroll")) : 0,
+      };
+    }
 
+    function pushStateToURL() {
+      const p = new URLSearchParams();
+      const q = document.getElementById("search-input").value.trim();
+      const sort = document.getElementById("sort-select").value;
+      if (q)                         p.set("q",     q);
+      if (sort !== "set-number")     p.set("sort",  sort);
+      if (activeCategories.size > 0) p.set("cats",  [...activeCategories].join(","));
+      if (activeProfiles.size > 0)   p.set("profs", [...activeProfiles].join(","));
+      history.replaceState(null, "", window.location.pathname + (p.toString() ? "?" + p.toString() : ""));
+    }
+
+    function saveScrollToURL() {
+      const p = new URLSearchParams(window.location.search);
+      p.set("scroll", Math.round(window.scrollY));
+      history.replaceState(null, "", window.location.pathname + "?" + p.toString());
+    }
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+    async function init() {
+      try {
+        const [setsSnap, catsSnap, profsSnap] = await Promise.all([
+          getDocs(query(collection(db, "sets"), orderBy("setNo"))),
+          getDocs(query(collection(db, "categories"), orderBy("name"))),
+          getDocs(query(collection(db, "profiles"), orderBy("name")))
+        ]);
+        allSets       = setsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        allCategories = catsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        allProfiles   = profsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        const state = readStateFromURL();
+        document.getElementById("search-input").value = state.q;
+        if (state.q) document.getElementById("search-clear").style.display = "block";
+        document.getElementById("sort-select").value = state.sort;
+        activeCategories = new Set(state.cats);
+        activeProfiles   = new Set(state.profs);
+
+        buildCategoryBar();
+        buildProfileBar();
+        filterAndRender();
+
+        if (state.scroll > 0) {
+          requestAnimationFrame(() => setTimeout(() => window.scrollTo({ top: state.scroll, behavior: "instant" }), 80));
+        }
+      } catch(e) {
+        document.getElementById("admin-loading").innerHTML =
+          `<p style="color:var(--clay)">Error loading: ${e.message}</p>`;
+      }
+    }
+
+    // ── Category bar ──────────────────────────────────────────────────────────
+    function buildCategoryBar() {
+      if (allCategories.length === 0) return;
+      document.getElementById("cat-filter-bar").style.display = "flex";
+      const pills = document.getElementById("cat-filter-pills");
+      pills.innerHTML = "";
+      allCategories.forEach(cat => {
+        const btn = document.createElement("button");
+        btn.className = "cat-filter-btn" + (activeCategories.has(cat.id) ? " active" : "");
+        btn.dataset.cat = cat.id;
+        btn.textContent = cat.name;
+        btn.onclick = () => toggleCategory(cat.id);
+        pills.appendChild(btn);
+      });
+      updateClearBtn("cat-clear-btn", activeCategories.size > 0);
+    }
+
+    function toggleCategory(catId) {
+      activeCategories.has(catId) ? activeCategories.delete(catId) : activeCategories.add(catId);
+      document.querySelectorAll("#cat-filter-pills .cat-filter-btn").forEach(b =>
+        b.classList.toggle("active", activeCategories.has(b.dataset.cat)));
+      updateClearBtn("cat-clear-btn", activeCategories.size > 0);
+      filterAndRender();
+    }
+
+    window.clearCategoryFilters = function() {
+      activeCategories.clear();
+      document.querySelectorAll("#cat-filter-pills .cat-filter-btn").forEach(b => b.classList.remove("active"));
+      updateClearBtn("cat-clear-btn", false);
+      filterAndRender();
+    };
+
+    // ── Profile bar ───────────────────────────────────────────────────────────
+    function buildProfileBar() {
+      const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+      const linkedIds = new Set();
+      allSets.forEach(set => {
+        [set.giftedBy, set.description].forEach(field => {
+          if (!field) return;
+          let m; linkRegex.lastIndex = 0;
+          while ((m = linkRegex.exec(field)) !== null) linkedIds.add(m[2]);
+        });
+      });
+      const visible = allProfiles.filter(p => linkedIds.has(p.id));
+      if (visible.length === 0) return;
+      document.getElementById("profile-filter-bar").style.display = "flex";
+      const pills = document.getElementById("profile-filter-pills");
+      pills.innerHTML = "";
+      visible.forEach(prof => {
+        const btn = document.createElement("button");
+        btn.className = "cat-filter-btn" + (activeProfiles.has(prof.id) ? " active" : "");
+        btn.dataset.prof = prof.id;
+        btn.textContent = prof.name;
+        btn.onclick = () => toggleProfile(prof.id);
+        pills.appendChild(btn);
+      });
+      updateClearBtn("profile-clear-btn", activeProfiles.size > 0);
+    }
+
+    function toggleProfile(profId) {
+      activeProfiles.has(profId) ? activeProfiles.delete(profId) : activeProfiles.add(profId);
+      document.querySelectorAll("#profile-filter-pills .cat-filter-btn").forEach(b =>
+        b.classList.toggle("active", activeProfiles.has(b.dataset.prof)));
+      updateClearBtn("profile-clear-btn", activeProfiles.size > 0);
+      filterAndRender();
+    }
+
+    window.clearProfileFilters = function() {
+      activeProfiles.clear();
+      document.querySelectorAll("#profile-filter-pills .cat-filter-btn").forEach(b => b.classList.remove("active"));
+      updateClearBtn("profile-clear-btn", false);
+      filterAndRender();
+    };
+
+    function updateClearBtn(id, visible) {
+      const btn = document.getElementById(id);
+      if (btn) btn.classList.toggle("visible", visible);
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    function esc(s) {
+      return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+    }
+
+    function normalise(s) { return String(s == null ? "" : s).toLowerCase().replace(/[^a-z0-9 ]/g, " "); }
+
+    function setHasProfile(set, profId) {
+      const rx = /\[([^\]]+)\]\(([^)]+)\)/g;
+      for (const field of [set.giftedBy, set.description]) {
+        if (!field) continue;
+        let m; rx.lastIndex = 0;
+        while ((m = rx.exec(field)) !== null) { if (m[2] === profId) return true; }
+      }
+      return false;
+    }
+
+    // ── Filter & render ───────────────────────────────────────────────────────
+    window.clearFilters = function() {
+      document.getElementById("search-input").value = "";
+      document.getElementById("search-clear").style.display = "none";
+      window.clearCategoryFilters();
+      window.clearProfileFilters();
+    };
+
+    function filterAndRender() {
+      const q    = normalise(document.getElementById("search-input").value);
+      const sort = document.getElementById("sort-select").value;
+
+      let filtered = allSets.filter(set => {
+        if (activeCategories.size > 0) {
+          const setCats = (set.categories || []).map(String);
+          for (const id of activeCategories) if (!setCats.includes(String(id))) return false;
+        }
+        if (activeProfiles.size > 0) {
+          if (![...activeProfiles].some(id => setHasProfile(set, id))) return false;
+        }
+        if (!q) return true;
+        const hay = [set.setNo, set.name, set.year, set.country, set.province,
+                     set.city, set.giftedBy, set.occasion, set.description]
+          .map(normalise).join(" ");
+        return q.split(" ").filter(Boolean).every(w => hay.includes(w));
+      });
+
+      // Sort
+      filtered = [...filtered].sort((a, b) => {
+        switch(sort) {
+          case "set-number":      return (a.setNo || 0) - (b.setNo || 0);
+          case "set-number-desc": return (b.setNo || 0) - (a.setNo || 0);
+          case "az":              return (a.name||"").localeCompare(b.name||"");
+          case "za":              return (b.name||"").localeCompare(a.name||"");
+          case "country-az":      return (a.country||"").localeCompare(b.country||"");
+          case "country-za":      return (b.country||"").localeCompare(a.country||"");
+          case "recently-added":
+          default:                return (b.createdAt?.seconds||0) - (a.createdAt?.seconds||0);
+        }
+      });
+
+      pushStateToURL();
+      renderList(filtered);
+    }
+
+    function renderList(sets) {
       document.getElementById("admin-loading").style.display = "none";
+      const list  = document.getElementById("admin-list");
+      const empty = document.getElementById("admin-empty");
+      const info  = document.getElementById("results-info");
 
       if (sets.length === 0) {
-        document.getElementById("admin-grid").innerHTML = `
-          <div class="admin-empty">
-            <p>No sets yet. <a href="edit.html">Add your first set!</a></p>
-          </div>`;
+        list.innerHTML = "";
+        empty.style.display = "block";
+        info.textContent = "";
+        const q = document.getElementById("search-input").value.trim();
+        let msg = "No sets found";
+        if (q) msg += ` matching "${q}"`;
+        document.getElementById("empty-message").textContent = msg + ".";
         return;
       }
 
-      document.getElementById("admin-grid").innerHTML = sets.map(set => `
-        <div class="admin-card">
-          <div class="admin-card-img-wrap">
-            <img src="${esc(set.imageUrl)}" alt="${esc(set.name)}" class="admin-card-img" onerror="this.src='../img/placeholder.svg'" />
-          </div>
-          <div class="admin-card-info">
-            <strong class="admin-card-name">${esc(set.name)}</strong>
-            <span class="admin-card-meta">${[set.year, set.country].filter(Boolean).join(" · ") || "—"}</span>
-          </div>
-          <div class="admin-card-actions">
-            <a href="../set.html?id=${esc(set.id)}" class="btn-sm btn-view" target="_blank">View</a>
-            <a href="edit.html?id=${esc(set.id)}" class="btn-sm btn-edit-sm">Edit</a>
-            <button class="btn-sm btn-del" onclick="openDeleteModal('${esc(set.id)}','${esc(set.imagePath || "")}','${esc(set.name)}')">Delete</button>
-          </div>
-        </div>
-      `).join("");
+      empty.style.display = "none";
+      const q = document.getElementById("search-input").value.trim();
+      let infoText = `${sets.length} set${sets.length !== 1 ? "s" : ""}`;
+      if (activeCategories.size > 0) infoText += ` · ${activeCategories.size} categor${activeCategories.size===1?"y":"ies"}`;
+      if (activeProfiles.size > 0)   infoText += ` · ${activeProfiles.size} person${activeProfiles.size===1?"":"s"}`;
+      if (q) infoText += ` matching "${q}"`;
+      info.textContent = infoText;
+
+      // Build category id→name map
+      const catMap = {};
+      allCategories.forEach(c => { catMap[c.id] = c.name; });
+
+      list.innerHTML = sets.map(set => {
+        const metaParts = [
+          set.setNo != null ? `#${set.setNo}` : null,
+          set.year   ? String(set.year)  : null,
+          [set.country, set.province, set.city].filter(Boolean).join(", ") || null,
+          set.giftedBy ? `Gifted by ${set.giftedBy.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")}` : null,
+          set.occasion ? set.occasion : null,
+        ].filter(Boolean);
+
+        const catChips = (set.categories || [])
+          .map(cid => catMap[cid]).filter(Boolean)
+          .map(n => `<span class="admin-row-cat">${esc(n)}</span>`).join("");
+
+        return `
+          <div class="admin-row">
+            <img
+              src="${esc(set.imageUrl || "")}"
+              alt="${esc(set.name)}"
+              class="admin-row-thumb"
+              onerror="this.src='../img/placeholder.svg'"
+            />
+            <div class="admin-row-main">
+              <span class="admin-row-name">${esc(set.name)}</span>
+              <span class="admin-row-meta">${esc(metaParts.join(" · "))}</span>
+              ${catChips ? `<div class="admin-row-cats">${catChips}</div>` : ""}
+            </div>
+            <div class="admin-row-actions">
+              <a href="#" class="btn-sm btn-view" data-set-id="${esc(set.id)}" onclick="handleView(event,this)">View</a>
+              <a href="#" class="btn-sm btn-edit-sm" data-set-id="${esc(set.id)}" onclick="handleEdit(event,this)">Edit</a>
+              <button class="btn-sm btn-del" onclick="openDeleteModal('${esc(set.id)}','${esc(set.imagePath||"")}','${esc(set.name)}')">Delete</button>
+            </div>
+          </div>`;
+      }).join("");
     }
 
-    function esc(s) { return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
+    window.handleView = function(e, el) {
+      e.preventDefault();
+      const adminUrl = currentAdminUrl();
+      window.location.href = `../set.html?id=${el.dataset.setId}&admin=${encodeURIComponent(adminUrl)}`;
+    };
 
+    window.handleEdit = function(e, el) {
+      e.preventDefault();
+      const adminUrl = currentAdminUrl();
+      window.location.href = `edit.html?id=${el.dataset.setId}&from=${encodeURIComponent(adminUrl)}`;
+    };
+
+    window.saveScrollToURL = function() {
+      const p = new URLSearchParams(window.location.search);
+      p.set("scroll", Math.round(window.scrollY));
+      history.replaceState(null, "", window.location.pathname + "?" + p.toString());
+    };
+
+    // Returns current admin URL including scroll position — used when building edit/view links
+    function currentAdminUrl() {
+      const p = new URLSearchParams(window.location.search);
+      p.set("scroll", Math.round(window.scrollY));
+      return window.location.pathname + "?" + p.toString();
+    }
+
+    // ── Event listeners ───────────────────────────────────────────────────────
+    let debounce = null;
+    document.getElementById("search-input").addEventListener("input", (e) => {
+      document.getElementById("search-clear").style.display = e.target.value ? "block" : "none";
+      clearTimeout(debounce);
+      if (!e.target.value) filterAndRender();
+      else debounce = setTimeout(() => filterAndRender(), 500);
+    });
+    document.getElementById("search-clear").addEventListener("click", () => window.clearFilters());
+    document.getElementById("sort-select").addEventListener("change", filterAndRender);
+
+    // ── Delete ────────────────────────────────────────────────────────────────
     window.openDeleteModal = function(id, imagePath, name) {
       pendingDeleteId = id;
       pendingDeleteImagePath = imagePath;
@@ -128,29 +564,26 @@
 
     window.closeDeleteModal = function() {
       document.getElementById("delete-modal").style.display = "none";
-      pendingDeleteId = null;
-      pendingDeleteImagePath = null;
+      pendingDeleteId = null; pendingDeleteImagePath = null;
     };
 
     window.confirmDelete = async function() {
       if (!pendingDeleteId) return;
       const btn = document.getElementById("confirm-delete-btn");
-      btn.textContent = "Deleting…";
-      btn.disabled = true;
+      btn.textContent = "Deleting…"; btn.disabled = true;
       try {
-        // Delete image from storage
         if (pendingDeleteImagePath) {
-          try {
-            await deleteObject(ref(storage, pendingDeleteImagePath));
-          } catch (e) { console.warn("Image delete failed (may already be gone):", e); }
+          try { await deleteObject(ref(storage, pendingDeleteImagePath)); }
+          catch(e) { console.warn("Image delete failed:", e); }
         }
         await deleteDoc(doc(db, "sets", pendingDeleteId));
         closeDeleteModal();
-        loadSets();
-      } catch (e) {
+        // Remove the row from allSets and re-render without full reload
+        allSets = allSets.filter(s => s.id !== pendingDeleteId);
+        filterAndRender();
+      } catch(e) {
         alert("Error deleting set: " + e.message);
-        btn.textContent = "Yes, Delete";
-        btn.disabled = false;
+        btn.textContent = "Yes, Delete"; btn.disabled = false;
       }
     };
   </script>

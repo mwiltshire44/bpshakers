@@ -179,7 +179,7 @@
         <h1 class="site-title"><a href="../index.html" class="title-link">The Salt &amp; Pepper Shakers</a></h1>
       </div>
       <nav class="header-nav">
-        <a href="index.html" class="nav-link">← Manage Sets</a>
+        <a href="index.html" class="nav-link" id="nav-back-btn">← Manage Sets</a>
         <a href="#" class="nav-link" id="logout-btn">Sign Out</a>
       </nav>
     </div>
@@ -231,7 +231,7 @@
       <section class="form-section">
         <h3 class="section-title">Set Information</h3>
         <div class="form-grid">
-          <div class="form-group full-width">
+          <div class="form-group">
             <label class="form-label" for="f-name">Name <span class="required">*</span></label>
             <input type="text" id="f-name" class="form-input" placeholder="e.g. Ceramic Roosters" />
           </div>
@@ -240,16 +240,20 @@
             <input type="number" id="f-setno" class="form-input" placeholder="e.g. 42" min="1" step="1" />
           </div>
           <div class="form-group">
-            <label class="form-label" for="f-year">Year Obtained</label>
-            <input type="number" id="f-year" class="form-input" placeholder="e.g. 1994" min="1800" max="2100" />
-          </div>
-          <div class="form-group">
             <label class="form-label" for="f-gifted">Gifted by</label>
             <div class="profile-link-wrap" id="wrap-gifted">
               <button type="button" class="profile-link-btn" onclick="openPicker('gifted')">&#128279; Link to Profile</button>
               <div class="profile-picker-panel" id="picker-gifted"></div>
               <input type="text" id="f-gifted" class="form-input" placeholder="e.g. Aunt Margaret" />
             </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="f-year">Year Obtained</label>
+            <input type="number" id="f-year" class="form-input" placeholder="e.g. 1994" min="1800" max="2100" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="f-occasion">Occasion</label>
+            <input type="text" id="f-occasion" class="form-input" placeholder="e.g. Birthday, Christmas" />
           </div>
           <div class="form-group">
             <label class="form-label" for="f-country">Country</label>
@@ -536,7 +540,7 @@
             <input type="text" id="f-city" class="form-input" placeholder="e.g. Oaxaca" />
           </div>
           <div class="form-group full-width">
-            <label class="form-label" for="f-desc">Description <span class="form-optional">(optional)</span></label>
+            <label class="form-label" for="f-desc">Description</label>
             <div class="profile-link-wrap" id="wrap-desc">
               <button type="button" class="profile-link-btn" onclick="openPicker('desc')">&#128279; Link to Profile</button>
               <div class="profile-picker-panel" id="picker-desc"></div>
@@ -561,7 +565,7 @@
       <div class="form-success" id="form-success" style="display:none"></div>
 
       <div class="form-footer">
-        <a href="index.html" class="btn-soft">Cancel</a>
+        <a href="index.html" class="btn-soft" id="cancel-btn">Cancel</a>
         <button type="button" class="btn-primary" id="save-btn" onclick="saveSet()">Save Set</button>
       </div>
     </div>
@@ -587,12 +591,21 @@
     let existingImageUrl = null;
     let existingImagePath = null;
     let editId = null;
+    let fromUrl = null;
 
     // ─── Auth ────────────────────────────────────────────────────────────────
     onAuthStateChanged(auth, async (user) => {
       if (!user) { window.location.href = "login.html"; return; }
       const params = new URLSearchParams(window.location.search);
       editId = params.get("id");
+      fromUrl = params.get("from") ? decodeURIComponent(params.get("from")) : null;
+      // Wire cancel and nav-back to return to fromUrl if present
+      if (fromUrl) {
+        const cancelBtn = document.getElementById("cancel-btn");
+        const navBack   = document.getElementById("nav-back-btn");
+        if (cancelBtn) cancelBtn.href = fromUrl;
+        if (navBack)   navBack.href   = fromUrl;
+      }
       await loadCategories();
       if (editId) {
         document.getElementById("form-heading").textContent = "Edit Set";
@@ -633,6 +646,7 @@
       document.getElementById("f-name").value = d.name || "";
       document.getElementById("f-year").value = d.year || "";
       document.getElementById("f-gifted").value = d.giftedBy || "";
+      document.getElementById("f-occasion").value = d.occasion || "";
       document.getElementById("f-country").value = d.country || "";
       document.getElementById("f-province").value = d.province || "";
       document.getElementById("f-city").value = d.city || "";
@@ -1026,6 +1040,7 @@
           province: document.getElementById("f-province").value.trim(),
           year: document.getElementById("f-year").value ? parseInt(document.getElementById("f-year").value) : null,
           giftedBy: document.getElementById("f-gifted").value.trim(),
+          occasion: document.getElementById("f-occasion").value.trim(),
           description: document.getElementById("f-desc").value.trim(),
           categories: selectedCategories,
           imageUrl, imagePath,
@@ -1034,12 +1049,12 @@
         if (editId) {
           await updateDoc(doc(db, "sets", editId), data);
           showSuccess("Set updated successfully!");
-          setTimeout(() => window.location.href = "index.html", 1000);
+          setTimeout(() => { window.location.href = fromUrl || "index.html"; }, 1000);
         } else {
           data.createdAt = serverTimestamp();
           await addDoc(collection(db, "sets"), data);
           showSuccess("Set added successfully!");
-          setTimeout(() => window.location.href = "index.html", 1000);
+          setTimeout(() => { window.location.href = fromUrl || "index.html"; }, 1000);
         }
         btn.textContent = editId ? "Save Changes" : "Save Set";
         btn.disabled = false;

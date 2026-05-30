@@ -8,6 +8,40 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/main.css" />
+  <style>
+    /* Multi-select pill active state — uses existing cat-filter-btn styles, just tweaks active */
+    .cat-filter-btn.active {
+      background: var(--clay);
+      color: #fff;
+      border-color: var(--clay-dark);
+    }
+    /* Clear button for filter rows */
+    .filter-clear-btn {
+      flex-shrink: 0;
+      display: none;
+      align-items: center;
+      padding: 5px 11px;
+      font-family: 'Lora', serif;
+      font-size: 0.78rem;
+      cursor: pointer;
+      border: 1.5px solid rgba(184,92,56,0.4);
+      border-radius: 99px;
+      background: var(--cream);
+      color: var(--clay-dark);
+      white-space: nowrap;
+      transition: background 0.15s, border-color 0.15s;
+      margin-left: 8px;
+    }
+    .filter-clear-btn.visible { display: inline-flex; }
+    .filter-clear-btn:hover { background: rgba(184,92,56,0.08); border-color: var(--clay); }
+    /* Profile filter bar — same structure as category bar */
+    .profile-filter-bar {
+      display: none;
+      padding: 0 0 6px;
+      border-bottom: 1px solid rgba(200,170,130,0.2);
+      margin-bottom: 2px;
+    }
+  </style>
 </head>
 <body>
 
@@ -33,15 +67,15 @@
         <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
         </svg>
-        <input type="text" id="search-input" class="search-input" placeholder="Search by name, year, origin, description…" autocomplete="off" />
+        <input type="text" id="search-input" class="search-input" placeholder="Search by name, year, origin, occasion, description…" autocomplete="off" />
         <button class="search-clear" id="search-clear" aria-label="Clear search" style="display:none">✕</button>
       </div>
       <div class="sort-wrap">
         <label class="sort-label" for="sort-select">Sort by</label>
         <select id="sort-select" class="sort-select">
+          <option value="set-number">Oldest first</option>
+          <option value="set-number-desc">Newest first</option>
           <option value="recently-added">Recently added</option>
-          <option value="newest">Newest first</option>
-          <option value="oldest">Oldest first</option>
           <option value="az">Name A → Z</option>
           <option value="za">Name Z → A</option>
           <option value="country-az">By Country A → Z</option>
@@ -50,20 +84,28 @@
       </div>
     </div>
 
-    <!-- Category Filter Bar (shown once categories load) -->
+    <!-- Category Filter Bar -->
     <div class="category-filter-bar" id="category-filter-bar" style="display:none">
       <span class="cat-filter-label">Category</span>
       <div class="cat-filter-pills-scroll">
-        <div class="cat-filter-pills" id="cat-filter-pills">
-          <button class="cat-filter-btn active" data-cat="" onclick="selectCategory(this, '')">All</button>
-        </div>
+        <div class="cat-filter-pills" id="cat-filter-pills"></div>
       </div>
+      <button class="filter-clear-btn" id="cat-clear-btn" onclick="clearCategoryFilters()" title="Clear category filters">✕ Clear</button>
+    </div>
+
+    <!-- Profile Filter Bar -->
+    <div class="profile-filter-bar" id="profile-filter-bar">
+      <span class="cat-filter-label">Person</span>
+      <div class="cat-filter-pills-scroll">
+        <div class="cat-filter-pills" id="profile-filter-pills"></div>
+      </div>
+      <button class="filter-clear-btn" id="profile-clear-btn" onclick="clearProfileFilters()" title="Clear profile filters">✕ Clear</button>
     </div>
 
     <!-- Results count -->
     <div class="results-info" id="results-info"></div>
 
-    <!-- Loading spinner (outside grid so grid.innerHTML doesn't destroy it) -->
+    <!-- Loading spinner -->
     <div class="gallery-loading" id="gallery-loading">
       <div class="loading-dots"><span></span><span></span><span></span></div>
       <p>Loading the collection…</p>
@@ -111,21 +153,75 @@
 
     let allSets = [];
     let allCategories = [];
-    let activeCategory = ""; // "" = All
+    let allProfiles = [];
 
-    // Load categories and sets in parallel
+    // ── Filter state ──────────────────────────────────────────────────────────
+    let activeCategories = new Set(); // AND logic
+    let activeProfiles   = new Set(); // OR logic
+
+    // ── URL state helpers ─────────────────────────────────────────────────────
+    function readStateFromURL() {
+      const p = new URLSearchParams(window.location.search);
+      return {
+        q:       p.get("q")      || "",
+        sort:    p.get("sort")   || "set-number",
+        cats:    p.get("cats")   ? p.get("cats").split(",").filter(Boolean) : [],
+        profs:   p.get("profs")  ? p.get("profs").split(",").filter(Boolean) : [],
+        scroll:  p.get("scroll") ? parseInt(p.get("scroll")) : 0,
+      };
+    }
+
+    function pushStateToURL() {
+      const p = new URLSearchParams();
+      const q = document.getElementById("search-input").value.trim();
+      const sort = document.getElementById("sort-select").value;
+      if (q)                          p.set("q",     q);
+      if (sort !== "set-number")      p.set("sort",  sort);
+      if (activeCategories.size > 0)  p.set("cats",  [...activeCategories].join(","));
+      if (activeProfiles.size > 0)    p.set("profs", [...activeProfiles].join(","));
+      // scroll is written by set-card click handler, not here
+      const newURL = window.location.pathname + (p.toString() ? "?" + p.toString() : "");
+      history.replaceState(null, "", newURL);
+    }
+
+    // Before navigating to a set page, stamp current scroll into URL
+    function saveScrollToURL() {
+      const p = new URLSearchParams(window.location.search);
+      p.set("scroll", Math.round(window.scrollY));
+      history.replaceState(null, "", window.location.pathname + "?" + p.toString());
+    }
+
+    // ── Load data ─────────────────────────────────────────────────────────────
     async function init() {
       try {
-        const [setsSnap, catsSnap] = await Promise.all([
-          getDocs(query(collection(db, "sets"), orderBy("createdAt", "desc"))),
-          getDocs(query(collection(db, "categories"), orderBy("name")))
+        const [setsSnap, catsSnap, profsSnap] = await Promise.all([
+          getDocs(query(collection(db, "sets"), orderBy("setNo"))),
+          getDocs(query(collection(db, "categories"), orderBy("name"))),
+          getDocs(query(collection(db, "profiles"), orderBy("name")))
         ]);
 
-        allSets = setsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        allCategories = catsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        allSets       = setsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        allCategories = catsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        allProfiles   = profsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        // Restore state from URL
+        const state = readStateFromURL();
+        document.getElementById("search-input").value = state.q;
+        if (state.q) document.getElementById("search-clear").style.display = "block";
+        document.getElementById("sort-select").value = state.sort;
+        activeCategories = new Set(state.cats);
+        activeProfiles   = new Set(state.profs);
 
         buildCategoryBar();
+        buildProfileBar();
         filterAndSort();
+
+        // Restore scroll position after render
+        if (state.scroll > 0) {
+          requestAnimationFrame(() => {
+            setTimeout(() => window.scrollTo({ top: state.scroll, behavior: "instant" }), 80);
+          });
+        }
       } catch (e) {
         console.error("Error loading data:", e);
         document.getElementById("gallery-loading").innerHTML =
@@ -133,37 +229,127 @@
       }
     }
 
+    // ── Category bar ─────────────────────────────────────────────────────────
     function buildCategoryBar() {
       if (allCategories.length === 0) return;
-
       const bar = document.getElementById("category-filter-bar");
       const pills = document.getElementById("cat-filter-pills");
-
       bar.style.display = "flex";
+      pills.innerHTML = "";
       allCategories.forEach(cat => {
         const btn = document.createElement("button");
-        btn.className = "cat-filter-btn";
+        btn.className = "cat-filter-btn" + (activeCategories.has(cat.id) ? " active" : "");
         btn.dataset.cat = cat.id;
         btn.textContent = cat.name;
-        btn.onclick = () => selectCategory(btn, cat.id);
+        btn.onclick = () => toggleCategory(cat.id);
         pills.appendChild(btn);
       });
+      updateClearBtn("cat-clear-btn", activeCategories.size > 0);
     }
 
-    window.selectCategory = function(btn, catId) {
-      activeCategory = String(catId); // ensure string comparison
-      document.querySelectorAll(".cat-filter-btn").forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
+    function toggleCategory(catId) {
+      if (activeCategories.has(catId)) {
+        activeCategories.delete(catId);
+      } else {
+        activeCategories.add(catId);
+      }
+      // Update pill appearance
+      document.querySelectorAll("#cat-filter-pills .cat-filter-btn").forEach(btn => {
+        btn.classList.toggle("active", activeCategories.has(btn.dataset.cat));
+      });
+      updateClearBtn("cat-clear-btn", activeCategories.size > 0);
+      filterAndSort();
+    }
+
+    window.clearCategoryFilters = function() {
+      activeCategories.clear();
+      document.querySelectorAll("#cat-filter-pills .cat-filter-btn").forEach(btn => btn.classList.remove("active"));
+      updateClearBtn("cat-clear-btn", false);
       filterAndSort();
     };
 
+    // ── Profile bar ───────────────────────────────────────────────────────────
+    function buildProfileBar() {
+      if (allProfiles.length === 0) return;
+
+      // Only show profiles that are actually linked in at least one set
+      const linkedProfileIds = new Set();
+      const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+      allSets.forEach(set => {
+        [set.giftedBy, set.description].forEach(field => {
+          if (!field) return;
+          let m;
+          while ((m = linkRegex.exec(field)) !== null) {
+            linkedProfileIds.add(m[2]);
+          }
+          linkRegex.lastIndex = 0;
+        });
+      });
+
+      const visibleProfiles = allProfiles.filter(p => linkedProfileIds.has(p.id));
+      if (visibleProfiles.length === 0) return;
+
+      const bar = document.getElementById("profile-filter-bar");
+      const pills = document.getElementById("profile-filter-pills");
+      bar.style.display = "flex";
+      pills.innerHTML = "";
+
+      visibleProfiles.forEach(prof => {
+        const btn = document.createElement("button");
+        btn.className = "cat-filter-btn" + (activeProfiles.has(prof.id) ? " active" : "");
+        btn.dataset.prof = prof.id;
+        btn.textContent = prof.name;
+        btn.onclick = () => toggleProfile(prof.id);
+        pills.appendChild(btn);
+      });
+      updateClearBtn("profile-clear-btn", activeProfiles.size > 0);
+    }
+
+    function toggleProfile(profId) {
+      if (activeProfiles.has(profId)) {
+        activeProfiles.delete(profId);
+      } else {
+        activeProfiles.add(profId);
+      }
+      document.querySelectorAll("#profile-filter-pills .cat-filter-btn").forEach(btn => {
+        btn.classList.toggle("active", activeProfiles.has(btn.dataset.prof));
+      });
+      updateClearBtn("profile-clear-btn", activeProfiles.size > 0);
+      filterAndSort();
+    }
+
+    window.clearProfileFilters = function() {
+      activeProfiles.clear();
+      document.querySelectorAll("#profile-filter-pills .cat-filter-btn").forEach(btn => btn.classList.remove("active"));
+      updateClearBtn("profile-clear-btn", false);
+      filterAndSort();
+    };
+
+    function updateClearBtn(btnId, visible) {
+      const btn = document.getElementById(btnId);
+      if (btn) btn.classList.toggle("visible", visible);
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
     function esc(str) {
       if (!str) return "";
       return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
     }
 
-    // ── Country color map ──────────────────────────────────────────────────
-    // Each entry: [borderColor, bgColor, textColor]
+    function setHasProfile(set, profId) {
+      const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+      for (const field of [set.giftedBy, set.description]) {
+        if (!field) continue;
+        let m;
+        while ((m = linkRegex.exec(field)) !== null) {
+          if (m[2] === profId) { linkRegex.lastIndex = 0; return true; }
+        }
+        linkRegex.lastIndex = 0;
+      }
+      return false;
+    }
+
+    // ── Country color map ─────────────────────────────────────────────────────
     const COUNTRY_COLORS = {
       "Canada":         ["#c41e3a", "#f9f4ec", "#8b0000"],
       "USA":            ["#3c3b6e", "#f9f4ec", "#1a1940"],
@@ -220,19 +406,16 @@
       "Cuba":           ["#002a8f", "#f9f4ec", "#001a60"],
       "Jamaica":        ["#2d7a2d", "#f9f4ec", "#1a5a1a"],
     };
-
-    const DEFAULT_COLORS = ["#7a4f2e", "#f7f0e8", "#4a2e10"]; // warm wood fallback
-
+    const DEFAULT_COLORS = ["#7a4f2e", "#f7f0e8", "#4a2e10"];
     function getCountryColors(country) {
       if (!country || country.trim() === "") return COUNTRY_COLORS["Unknown"] || DEFAULT_COLORS;
       return COUNTRY_COLORS[country] || DEFAULT_COLORS;
     }
 
-
-
+    // ── Card HTML ─────────────────────────────────────────────────────────────
     function renderCardHTML(set, i) {
       return `
-        <a href="set.html?id=${esc(set.id)}" class="gallery-card" style="animation-delay:${i * 40}ms">
+        <a href="set.html?id=${esc(set.id)}" class="gallery-card" style="animation-delay:${i * 40}ms" data-set-id="${esc(set.id)}" data-gallery-link="1">
           <div class="card-image-wrap">
             <img
               src="${esc(set.imageUrl || "")}"
@@ -249,65 +432,50 @@
         </a>`;
     }
 
+    // ── Render gallery ────────────────────────────────────────────────────────
     function renderGallery(sets) {
-      const grid        = document.getElementById("gallery-grid");
-      const groups      = document.getElementById("country-groups");
-      const loading     = document.getElementById("gallery-loading");
-      const empty       = document.getElementById("gallery-empty");
-      const info        = document.getElementById("results-info");
-      const sort        = document.getElementById("sort-select").value;
-      const isCountry   = sort === "country-az" || sort === "country-za";
+      const grid      = document.getElementById("gallery-grid");
+      const groups    = document.getElementById("country-groups");
+      const loading   = document.getElementById("gallery-loading");
+      const empty     = document.getElementById("gallery-empty");
+      const info      = document.getElementById("results-info");
+      const sort      = document.getElementById("sort-select").value;
+      const isCountry = sort === "country-az" || sort === "country-za";
 
       if (loading) loading.style.display = "none";
 
       if (sets.length === 0) {
-        grid.innerHTML = "";
-        groups.innerHTML = "";
-        grid.style.display = "";
-        groups.style.display = "none";
-        empty.style.display = "block";
+        grid.innerHTML = ""; groups.innerHTML = "";
+        grid.style.display = ""; groups.style.display = "none";
+        empty.style.display = "block"; info.textContent = "";
         const q = document.getElementById("search-input").value.trim();
-        const catName = activeCategory
-          ? (allCategories.find(c => c.id === activeCategory)?.name || "")
-          : "";
         let msg = "No shakers found";
-        if (q && catName) msg += ` matching "${q}" in ${catName}`;
-        else if (q) msg += ` matching "${q}"`;
-        else if (catName) msg += ` in ${catName}`;
+        if (q) msg += ` matching "${q}"`;
+        if (activeCategories.size > 0) msg += " with the selected categories";
+        if (activeProfiles.size > 0) msg += " linked to the selected people";
         document.getElementById("empty-message").textContent = msg + ".";
-        info.textContent = "";
         return;
       }
 
       empty.style.display = "none";
 
       const q = document.getElementById("search-input").value.trim();
-      const catName = activeCategory
-        ? (allCategories.find(c => c.id === activeCategory)?.name || "")
-        : "";
       let infoText = `${sets.length} set${sets.length !== 1 ? "s" : ""}`;
-      if (catName) infoText += ` in ${catName}`;
+      if (activeCategories.size > 0) infoText += ` · ${activeCategories.size} categor${activeCategories.size === 1 ? "y" : "ies"}`;
+      if (activeProfiles.size > 0)   infoText += ` · ${activeProfiles.size} person${activeProfiles.size === 1 ? "" : "s"}`;
       if (q) infoText += ` matching "${q}"`;
       info.textContent = infoText;
 
       if (isCountry) {
-        // ── Grouped view ───────────────────────────────────────────────────
-        grid.style.display = "none";
-        grid.innerHTML = "";
+        grid.style.display = "none"; grid.innerHTML = "";
         groups.style.display = "block";
-
-        // Countries that get province sub-grouping
         const PROVINCE_COUNTRIES = ["Canada", "USA"];
-
-        // Group sets by country
         const grouped = {};
         sets.forEach(set => {
           const key = set.country && set.country.trim() ? set.country.trim() : "__unknown__";
           if (!grouped[key]) grouped[key] = [];
           grouped[key].push(set);
         });
-
-        // Sort country keys
         let keys = Object.keys(grouped).filter(k => k !== "__unknown__");
         keys.sort((a, b) => sort === "country-za" ? b.localeCompare(a) : a.localeCompare(b));
         if (grouped["__unknown__"]) keys.push("__unknown__");
@@ -317,151 +485,125 @@
           const [border, bg, text] = getCountryColors(countryName);
           const groupSets = grouped[key];
           const useProvinces = PROVINCE_COUNTRIES.includes(countryName);
-
           let innerHtml = "";
           if (useProvinces) {
-            // Sub-group by province
-            const byProvince = {};
-            const noProvince = [];
+            const byProvince = {}; const noProvince = [];
             groupSets.forEach(set => {
               const prov = set.province && set.province.trim() ? set.province.trim() : null;
-              if (prov) {
-                if (!byProvince[prov]) byProvince[prov] = [];
-                byProvince[prov].push(set);
-              } else {
-                noProvince.push(set);
-              }
+              if (prov) { if (!byProvince[prov]) byProvince[prov] = []; byProvince[prov].push(set); }
+              else noProvince.push(set);
             });
-
-            // Sort province keys
             let provKeys = Object.keys(byProvince);
             provKeys.sort((a, b) => sort === "country-za" ? b.localeCompare(a) : a.localeCompare(b));
-
-            // Province boxes
             innerHtml += provKeys.map((prov, pi) => {
               const provSets = byProvince[prov];
-              const provCards = provSets.map((set, i) => renderCardHTML(set, gi * 50 + pi * 20 + i)).join("");
-              return `
-                <div class="province-group">
-                  <div class="province-group-label">
-                    <span class="province-name">${esc(prov)}</span>
-                    <span class="country-count">${provSets.length} set${provSets.length !== 1 ? "s" : ""}</span>
-                  </div>
-                  <div class="gallery-grid province-group-grid">${provCards}</div>
-                </div>`;
+              return `<div class="province-group">
+                <div class="province-group-label">
+                  <span class="province-name">${esc(prov)}</span>
+                  <span class="country-count">${provSets.length} set${provSets.length !== 1 ? "s" : ""}</span>
+                </div>
+                <div class="gallery-grid province-group-grid">${provSets.map((s, i) => renderCardHTML(s, gi*50+pi*20+i)).join("")}</div>
+              </div>`;
             }).join("");
-
-            // Sets with no province go after all province boxes, no sub-box
             if (noProvince.length > 0) {
-              const noProvCards = noProvince.map((set, i) => renderCardHTML(set, gi * 50 + 40 + i)).join("");
-              innerHtml += `<div class="gallery-grid province-remainder-grid">${noProvCards}</div>`;
+              innerHtml += `<div class="gallery-grid province-remainder-grid">${noProvince.map((s, i) => renderCardHTML(s, gi*50+40+i)).join("")}</div>`;
             }
-
           } else {
-            // Flat grid for non-province countries
-            innerHtml = `<div class="gallery-grid country-group-grid">${groupSets.map((set, i) => renderCardHTML(set, gi * 20 + i)).join("")}</div>`;
+            innerHtml = `<div class="gallery-grid country-group-grid">${groupSets.map((s, i) => renderCardHTML(s, gi*20+i)).join("")}</div>`;
           }
-
-          return `
-            <div class="country-group" style="--cg-border:${border}; --cg-bg:${bg}; --cg-text:${text}">
-              <div class="country-group-label">
-                <span class="country-name">${esc(countryName)}</span>
-                <span class="country-count">${groupSets.length} set${groupSets.length !== 1 ? "s" : ""}</span>
-              </div>
-              ${innerHtml}
-            </div>`;
+          return `<div class="country-group" style="--cg-border:${border}; --cg-bg:${bg}; --cg-text:${text}">
+            <div class="country-group-label">
+              <span class="country-name">${esc(countryName)}</span>
+              <span class="country-count">${groupSets.length} set${groupSets.length !== 1 ? "s" : ""}</span>
+            </div>
+            ${innerHtml}
+          </div>`;
         }).join("");
-
       } else {
-        // ── Flat view ──────────────────────────────────────────────────────
-        groups.style.display = "none";
-        groups.innerHTML = "";
+        groups.style.display = "none"; groups.innerHTML = "";
         grid.style.display = "";
         grid.innerHTML = sets.map((set, i) => renderCardHTML(set, i)).join("");
       }
+
+      // Attach scroll-saving click handlers to all cards
+      document.querySelectorAll(".gallery-card[data-gallery-link]").forEach(card => {
+        card.addEventListener("click", (e) => {
+          e.preventDefault();
+          pushStateToURL();
+          saveScrollToURL();
+          // Now window.location.href has the current state + scroll stamped in
+          const galleryUrl = encodeURIComponent(window.location.href);
+          const setId = card.dataset.setId;
+          window.location.href = `set.html?id=${setId}&gallery=${galleryUrl}`;
+        });
+      });
     }
 
+    // ── Filter & sort ─────────────────────────────────────────────────────────
     function normalise(s) { return String(s == null ? "" : s).toLowerCase().replace(/[^a-z0-9 ]/g, " "); }
 
     function filterAndSort() {
-      const q = normalise(document.getElementById("search-input").value);
+      const q    = normalise(document.getElementById("search-input").value);
       const sort = document.getElementById("sort-select").value;
 
       let filtered = allSets.filter(set => {
-        // Category filter
-        if (activeCategory && !(set.categories || []).map(String).includes(String(activeCategory))) return false;
+        // Category filter (AND — must have all selected)
+        if (activeCategories.size > 0) {
+          const setCats = (set.categories || []).map(String);
+          for (const catId of activeCategories) {
+            if (!setCats.includes(String(catId))) return false;
+          }
+        }
+        // Profile filter (OR — must have at least one selected)
+        if (activeProfiles.size > 0) {
+          const matchesAny = [...activeProfiles].some(profId => setHasProfile(set, profId));
+          if (!matchesAny) return false;
+        }
         // Text search
         if (!q) return true;
-        const haystack = [set.setNo, set.name, set.year, set.country, set.province, set.city, set.giftedBy, set.description]
+        const haystack = [set.setNo, set.name, set.year, set.country, set.province,
+                          set.city, set.giftedBy, set.occasion, set.description]
           .map(normalise).join(" ");
         return q.split(" ").filter(Boolean).every(word => haystack.includes(word));
       });
 
       filtered = sortSets(filtered, sort);
+      pushStateToURL();
       renderGallery(filtered);
     }
 
     function sortSets(sets, sort) {
       return [...sets].sort((a, b) => {
         switch (sort) {
-          case "newest": {
-            const aHasYear = a.year != null && a.year !== 0;
-            const bHasYear = b.year != null && b.year !== 0;
-            // No-year sets always go to the end
-            if (aHasYear && !bHasYear) return -1;
-            if (!aHasYear && bHasYear) return 1;
-            // Both have no year — sort by setNo desc
-            if (!aHasYear && !bHasYear) return (b.setNo || 0) - (a.setNo || 0);
-            // Both have year — sort year desc, then setNo desc
-            if (b.year !== a.year) return b.year - a.year;
-            return (b.setNo || 0) - (a.setNo || 0);
-          }
-          case "oldest": {
-            const aHasYear = a.year != null && a.year !== 0;
-            const bHasYear = b.year != null && b.year !== 0;
-            // No-year sets always go to the end
-            if (aHasYear && !bHasYear) return -1;
-            if (!aHasYear && bHasYear) return 1;
-            // Both have no year — sort by setNo asc
-            if (!aHasYear && !bHasYear) return (a.setNo || 0) - (b.setNo || 0);
-            // Both have year — sort year asc, then setNo asc
-            if (a.year !== b.year) return a.year - b.year;
+          case "set-number":
             return (a.setNo || 0) - (b.setNo || 0);
-          }
-          case "az":          return (a.name || "").localeCompare(b.name || "");
-          case "za":          return (b.name || "").localeCompare(a.name || "");
-          case "country-az":  return (a.country || "").localeCompare(b.country || "");
-          case "country-za":  return (b.country || "").localeCompare(a.country || "");
+          case "set-number-desc": return (b.setNo || 0) - (a.setNo || 0);
+          case "az":         return (a.name || "").localeCompare(b.name || "");
+          case "za":         return (b.name || "").localeCompare(a.name || "");
+          case "country-az": return (a.country || "").localeCompare(b.country || "");
+          case "country-za": return (b.country || "").localeCompare(a.country || "");
           case "recently-added":
-          default:            return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
+          default:           return (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0);
         }
       });
     }
 
+    // ── Global clear ─────────────────────────────────────────────────────────
     window.clearFilters = function() {
       document.getElementById("search-input").value = "";
       document.getElementById("search-clear").style.display = "none";
-      activeCategory = "";
-      document.querySelectorAll(".cat-filter-btn").forEach(b => b.classList.remove("active"));
-      const allBtn = document.querySelector(".cat-filter-btn[data-cat='']");
-      if (allBtn) allBtn.classList.add("active");
-      filterAndSort();
+      window.clearCategoryFilters();
+      window.clearProfileFilters();
     };
-
-    // Keep old clearSearch working too
     window.clearSearch = window.clearFilters;
 
-    // Debounced search — waits 0.75s after last keystroke before filtering
+    // ── Event listeners ───────────────────────────────────────────────────────
     let searchDebounceTimer = null;
     document.getElementById("search-input").addEventListener("input", (e) => {
       document.getElementById("search-clear").style.display = e.target.value ? "block" : "none";
       clearTimeout(searchDebounceTimer);
-      // If the field is cleared, filter immediately
-      if (!e.target.value) {
-        filterAndSort();
-      } else {
-        searchDebounceTimer = setTimeout(() => filterAndSort(), 750);
-      }
+      if (!e.target.value) { filterAndSort(); }
+      else { searchDebounceTimer = setTimeout(() => filterAndSort(), 750); }
     });
     document.getElementById("search-clear").addEventListener("click", () => window.clearFilters());
     document.getElementById("sort-select").addEventListener("change", filterAndSort);

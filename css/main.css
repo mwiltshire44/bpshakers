@@ -1024,7 +1024,7 @@ a { color: inherit; text-decoration: none; }
 .category-filter-bar {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   margin-bottom: 20px;
   overflow: hidden;
 }
@@ -1035,6 +1035,8 @@ a { color: inherit; text-decoration: none; }
   color: var(--text-light);
   white-space: nowrap;
   flex-shrink: 0;
+  align-self: center;
+  padding-right: 2px;
 }
 
 .cat-filter-pills-scroll {
@@ -1043,6 +1045,7 @@ a { color: inherit; text-decoration: none; }
   flex: 1;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  margin-left: 4px;
 }
 .cat-filter-pills-scroll::-webkit-scrollbar { display: none; }
 

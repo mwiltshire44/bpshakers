@@ -59,6 +59,10 @@
             <dt>Gifted by</dt>
             <dd id="meta-gifted"></dd>
           </div>
+          <div class="meta-row" id="row-occasion">
+            <dt>Occasion</dt>
+            <dd id="meta-occasion"></dd>
+          </div>
         </dl>
 
         <div class="set-categories-wrap" id="cats-wrap" style="display:none">
@@ -71,7 +75,7 @@
         </div>
 
         <div class="set-actions">
-          <a href="index.html" class="btn-back">← Back to Gallery</a>
+          <a href="index.html" class="btn-back" id="back-btn">← Back to Gallery</a>
           <a href="#" class="btn-edit" id="btn-edit" style="display:none">Edit Set</a>
         </div>
       </div>
@@ -122,6 +126,8 @@
           const editBtn = document.getElementById("btn-edit");
           editBtn.href = `admin/edit.html?id=${encodeURIComponent(id)}`;
           editBtn.style.display = "inline-flex";
+          // When clicked, stamp scroll position and encode this page as the return destination
+
         }
       } else {
         link.href = "admin/login.html";
@@ -190,6 +196,10 @@
           } catch(e) { /* categories are non-critical, fail silently */ }
         }
 
+        // Occasion
+        setText("meta-occasion", set.occasion || "");
+        showRow("row-occasion", set.occasion);
+
         // Description
         if (set.description) {
           document.getElementById("set-description").innerHTML = renderProfileLinks(set.description);
@@ -215,6 +225,29 @@
     }
 
     loadSet();
+
+    // ── Navigation: read gallery param and wire all back/edit links ────────────
+    (function() {
+      const params = new URLSearchParams(window.location.search);
+      const setId  = params.get("id");
+      const galleryUrl = params.get("gallery") ? decodeURIComponent(params.get("gallery")) : null;
+
+      // Back to Gallery button
+      const backBtn = document.getElementById("back-btn");
+      const adminUrl = params.get("admin") ? decodeURIComponent(params.get("admin")) : null;
+      if (galleryUrl)  { backBtn.href = galleryUrl; backBtn.textContent = "← Back to Gallery"; }
+      else if (adminUrl) { backBtn.href = adminUrl; backBtn.textContent = "← Back to Admin"; }
+
+      // Edit Set button — pass both the set page URL and the gallery URL forward
+      const editBtn = document.getElementById("btn-edit");
+      if (editBtn) {
+        editBtn.addEventListener("click", () => {
+          const setPageUrl = window.location.href; // includes gallery param
+          let editHref = `admin/edit.html?id=${encodeURIComponent(setId)}&from=${encodeURIComponent(setPageUrl)}`;
+          editBtn.href = editHref;
+        });
+      }
+    })();
 
     // ─── Profile link rendering ───────────────────────────────────────────────
     // Cache fetched profiles to avoid re-fetching within the same page load
