@@ -261,6 +261,24 @@ a { color: inherit; text-decoration: none; }
   box-shadow: var(--shadow-lg);
 }
 
+/* On touch devices, disable hover effects that can interfere with tapping */
+@media (hover: none) {
+  .gallery-card:hover {
+    transform: none;
+    box-shadow: var(--shadow-sm);
+  }
+  .gallery-card:hover .card-image {
+    transform: none;
+  }
+  .gallery-card:hover .card-overlay {
+    opacity: 0;
+  }
+  .gallery-card .card-overlay {
+    opacity: 1;
+    background: linear-gradient(to top, rgba(46,26,14,0.72) 0%, rgba(46,26,14,0.05) 50%, transparent 100%);
+  }
+}
+
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(18px); }
   to   { opacity: 1; transform: translateY(0); }

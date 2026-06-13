@@ -191,6 +191,20 @@
       history.replaceState(null, "", window.location.pathname + "?" + p.toString());
     }
 
+    // Build the complete gallery URL (all params + current scroll) in one pass
+    // without relying on window.location.search being up to date
+    function buildFullGalleryURL() {
+      const p = new URLSearchParams();
+      const q    = document.getElementById("search-input").value.trim();
+      const sort = document.getElementById("sort-select").value;
+      if (q)                         p.set("q",      q);
+      if (sort !== "set-number")     p.set("sort",   sort);
+      if (activeCategories.size > 0) p.set("cats",   [...activeCategories].join(","));
+      if (activeProfiles.size > 0)   p.set("profs",  [...activeProfiles].join(","));
+      p.set("scroll", Math.round(window.scrollY));
+      return window.location.pathname + "?" + p.toString();
+    }
+
     // ── Load data ─────────────────────────────────────────────────────────────
     async function init() {
       try {
@@ -415,7 +429,7 @@
     // ── Card HTML ─────────────────────────────────────────────────────────────
     function renderCardHTML(set, i) {
       return `
-        <a href="set.html?id=${esc(set.id)}" class="gallery-card" style="animation-delay:${i * 40}ms" data-set-id="${esc(set.id)}" data-gallery-link="1">
+        <a href="set.html?id=${esc(set.id)}" class="gallery-card" style="animation-delay:${Math.min(i * 40, 400)}ms" data-set-id="${esc(set.id)}" data-gallery-link="1">
           <div class="card-image-wrap">
             <img
               src="${esc(set.imageUrl || "")}"
@@ -525,17 +539,18 @@
         grid.innerHTML = sets.map((set, i) => renderCardHTML(set, i)).join("");
       }
 
-      // Attach scroll-saving click handlers to all cards
+      // Stamp gallery URL into card href at pointer/touch down so native
+      // navigation carries the right URL — avoids mobile tap reliability issues
+      // caused by preventDefault() in click handlers.
       document.querySelectorAll(".gallery-card[data-gallery-link]").forEach(card => {
-        card.addEventListener("click", (e) => {
-          e.preventDefault();
-          pushStateToURL();
-          saveScrollToURL();
-          // Now window.location.href has the current state + scroll stamped in
-          const galleryUrl = encodeURIComponent(window.location.href);
-          const setId = card.dataset.setId;
-          window.location.href = `set.html?id=${setId}&gallery=${galleryUrl}`;
-        });
+        function stampHref() {
+          const fullUrl = buildFullGalleryURL();
+          // Also keep window.location in sync for browser back button
+          history.replaceState(null, "", fullUrl);
+          card.href = `set.html?id=${card.dataset.setId}&gallery=${encodeURIComponent(fullUrl)}`;
+        }
+        card.addEventListener("mousedown",   stampHref, { passive: true });
+        card.addEventListener("touchstart",  stampHref, { passive: true });
       });
     }
 

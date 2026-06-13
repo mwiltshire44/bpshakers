@@ -168,8 +168,8 @@
         setText("meta-year", set.year || "");
         showRow("row-year", set.year);
 
-        // Origin: country, province, city
-        const origin = [set.country, set.province, set.city].filter(Boolean).join(", ");
+        // Origin: city, province, country
+        const origin = [set.city, set.province, set.country].filter(Boolean).join(", ");
         setText("meta-origin", origin);
         showRow("row-origin", origin);
 
@@ -228,23 +228,29 @@
 
     // ── Navigation: read gallery param and wire all back/edit links ────────────
     (function() {
-      const params = new URLSearchParams(window.location.search);
-      const setId  = params.get("id");
-      const galleryUrl = params.get("gallery") ? decodeURIComponent(params.get("gallery")) : null;
+      // Use the raw search string to avoid double-decoding issues.
+      // params.get() decodes once — do NOT call decodeURIComponent on top of it.
+      const params     = new URLSearchParams(window.location.search);
+      const setId      = params.get("id");
+      const galleryUrl = params.get("gallery") || null;  // already decoded by params.get
+      const adminUrl   = params.get("admin")   || null;
 
-      // Back to Gallery button
+      // Back button
       const backBtn = document.getElementById("back-btn");
-      const adminUrl = params.get("admin") ? decodeURIComponent(params.get("admin")) : null;
       if (galleryUrl)  { backBtn.href = galleryUrl; backBtn.textContent = "← Back to Gallery"; }
       else if (adminUrl) { backBtn.href = adminUrl; backBtn.textContent = "← Back to Admin"; }
 
-      // Edit Set button — pass both the set page URL and the gallery URL forward
+      // Edit Set button — build the set page URL by hand so gallery param
+      // gets re-encoded exactly once, not pulled from the (possibly mangled)
+      // window.location.href.
       const editBtn = document.getElementById("btn-edit");
       if (editBtn) {
         editBtn.addEventListener("click", () => {
-          const setPageUrl = window.location.href; // includes gallery param
-          let editHref = `admin/edit.html?id=${encodeURIComponent(setId)}&from=${encodeURIComponent(setPageUrl)}`;
-          editBtn.href = editHref;
+          // Reconstruct set page URL with gallery param encoded cleanly
+          let setPageUrl = `${window.location.pathname}?id=${encodeURIComponent(setId)}`;
+          if (galleryUrl) setPageUrl += `&gallery=${encodeURIComponent(galleryUrl)}`;
+          if (adminUrl)   setPageUrl += `&admin=${encodeURIComponent(adminUrl)}`;
+          editBtn.href = `admin/edit.html?id=${encodeURIComponent(setId)}&from=${encodeURIComponent(setPageUrl)}`;
         });
       }
     })();
