@@ -24,9 +24,9 @@ import { parse } from "csv-parse/sync";
 
 // ── Config ────────────────────────────────────────────────────────────────
 const SERVICE_ACCOUNT_PATH = "./salt-n-peppers-firebase-adminsdk-fbsvc-3ed749ad70.json";
-const SET_CSV_PATH         = "../set_data.csv";
-const PROFILE_CSV_PATH     = "../profiles.csv";
-const IMAGE_FOLDER         = "../Images";
+const SET_CSV_PATH     = "./set_data.csv";
+const PROFILE_CSV_PATH = "./profiles.csv";
+const IMAGE_FOLDER         = "./Images";
 const STORAGE_BUCKET       = "salt-n-peppers.firebasestorage.app";
 
 const OUT_W = 1200;
@@ -146,7 +146,7 @@ function autoLinkProfiles(text, profileList) {
   let result = text;
   for (const { name, id } of profileList) {
     // Escape any regex special chars in the name
-    const escaped = name.replace(/[.*+?^${}()|[\]\]/g, '\$&');
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     // Match whole-word only (word boundary on both sides)
     const rx = new RegExp(`\\b${escaped}\\b`, 'g');
     result = result.replace(rx, `[${name}](${id})`);

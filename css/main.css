@@ -1459,19 +1459,15 @@ select.form-input {
   appearance: none;
 }
 
-/* ── Profile links (in set detail page) ── */
 .profile-link {
   color: var(--clay);
-  text-decoration: underline;
-  text-decoration-style: dotted;
-  text-underline-offset: 3px;
+  text-decoration: none;
   cursor: pointer;
   font-style: inherit;
   transition: color 0.15s;
 }
 .profile-link:hover {
   color: var(--clay-dark);
-  text-decoration-style: solid;
 }
 
 /* ── Profile modal card ── */

@@ -45,13 +45,22 @@
     }
     .profile-picker-panel.open { display: block; }
 
-    .picker-header {
-      padding: 10px 14px 8px;
+    .picker-search {
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      padding: 9px 14px;
       font-family: 'Lora', serif;
-      font-size: 0.82rem;
-      font-weight: 500;
-      color: var(--text-muted);
+      font-size: 0.88rem;
+      color: var(--text);
+      background: var(--cream);
+      border: none;
       border-bottom: 1px solid rgba(200,170,130,0.3);
+      border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+      outline: none;
+    }
+    .picker-search:focus {
+      background: var(--cream);
     }
     .picker-list {
       max-height: 200px;
@@ -1106,6 +1115,8 @@
 
       await ensureProfilesLoaded();
       renderPickerPanel(fieldId);
+      const searchEl = document.getElementById('picker-search-' + fieldId);
+      if (searchEl) searchEl.focus();
 
       setTimeout(() => {
         document.addEventListener('click', function outsideHandler(e) {
@@ -1141,8 +1152,9 @@
           }).join('');
 
       panel.innerHTML =
-        '<div class="picker-header">Select a profile to link</div>'
-        + '<div class="picker-list">' + listHTML + '</div>'
+        '<input type="text" class="picker-search" id="picker-search-' + fieldId + '" placeholder="Search for a profile\u2026" '
+        + 'oninput="filterPickerList(\'' + fieldId + '\', this.value)" />'
+        + '<div class="picker-list" id="picker-list-' + fieldId + '">' + listHTML + '</div>'
         + '<button type="button" class="picker-create-btn" onclick="toggleCreateForm(\'' + fieldId + '\')">+ Create New Profile</button>'
         + '<div class="picker-create-form" id="create-form-' + fieldId + '">'
         + '<input type="text" class="picker-mini-input" id="mini-name-' + fieldId + '" placeholder="Name" maxlength="80" />'
@@ -1154,6 +1166,16 @@
         + '<span class="picker-mini-error" id="mini-error-' + fieldId + '"></span>'
         + '</div>';
     }
+
+    window.filterPickerList = function(fieldId, query) {
+      const list = document.getElementById('picker-list-' + fieldId);
+      if (!list) return;
+      const q = query.toLowerCase();
+      list.querySelectorAll('.picker-item').forEach(btn => {
+        const name = btn.textContent.toLowerCase();
+        btn.style.display = q === '' || name.includes(q) ? '' : 'none';
+      });
+    };
 
     window.toggleCreateForm = function(fieldId) {
       const form = document.getElementById('create-form-' + fieldId);
