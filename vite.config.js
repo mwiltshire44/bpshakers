@@ -14,6 +14,7 @@ export default defineConfig({
         adminIndex: 'admin/index.html',
         adminEdit: 'admin/edit.html',
         adminCategories: 'admin/categories.html',
+        adminProfiles: 'admin/profiles.html',
       }
     }
   },
